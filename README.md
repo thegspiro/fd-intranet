@@ -1,50 +1,74 @@
 **🚒 Fire Department Intranet Platform**
----
+***
 **🌟 Project Overview**
 This is an internal intranet built using Python/Django and MySQL designed to manage daily operations, track compliance, coordinate events, and handle official department governance (meetings and voting).
 
 The architecture is designed for flexibility and integration:
-**Hosting-Agnostic Documents:** Links to external hosts (SharePoint, Google Drive, Nextcloud).
-**Granular Security:** Uses Object-Level Permissions for sensitive records.
-**API-First Approach:** Enables easy connection to platforms like Vector Solutions and Salesforce.
-**Responsive Design:** Optimized for desktop and mobile access, with an API backbone for a future native mobile app.
----
+- **Hosting-Agnostic Documents:** Links to external hosts (SharePoint, Google Drive, Nextcloud).
+- **Granular Security:** Uses Object-Level Permissions for sensitive records.
+- **API-First Approach:** Enables easy connection to platforms like Vector Solutions and Salesforce.
+- **Responsive Design:** Optimized for desktop and mobile access, with an API backbone for a future native mobile app.
+***
 **🚀 Getting Started**
 Prerequisites
-Python 3.9
-+MySQL Server (5.7+)
-pip (Python package installer)
+- Python 3.9
+- +MySQL Server (5.7+)
+- pip (Python package installer)
 
 **⚙️ Local Setup**
 1. Clone the Repository:
+```python
 Bash
+```
+```python
 git clone https://github.com/thegspiro/fd-intranet
 cd fd-intranet
+```
 
-2. Create and Activate Virtual Environment:
+3. Create and Activate Virtual Environment:
+```python
 Bash
+```
+```python
 python -m venv venv
 source venv/bin/activate  # Linux/macOS
 # .\venv\Scripts\activate  # Windows
+```
 
 3. Install Dependencies:
 The project relies on Django, mysqlclient, python-dotenv, django-guardian, and djangorestframework.
+```python
 Bash
+```
+```python
 pip install -r requirements.txt
+```
 
 4. Database Configuration (Crucial for Security):Copy the provided template to create your local secrets file. This file MUST NOT be committed to Git.
+```python
 Bash
+```
+```python
 cp env.template .env
 # Edit the .env file with your local MySQL and Django SECRET_KEY values.
+```
 
 5. Run Migrations:
+```python
 Bash
+```
+```python
 python manage.py makemigrations
 python manage.py migrate
+```
 
 6. Create Superuser:
+```python
 Bash
+```
+```python
 python manage.py createsuperuser
+```
 
 7. Run the Server:
 ```python
