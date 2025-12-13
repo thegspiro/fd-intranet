@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Member Dashboard{% endblock %}
+
+{% block content %}
+    <h1>🔥 Welcome, {{ user.first_name }}!</h1>
+    <hr>
+    
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow-sm border-info">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Upcoming Scheduled Shifts</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_shifts %}
+                        <ul class="list-group list-group-flush">
+                            {% for slot in upcoming_shifts %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ slot.shift.date|date:"D, M d" }}</strong> at {{ slot.shift.start_datetime|time:"h:i A" }}
+                                    </div>
+                                    <span class="badge bg-danger rounded-pill">{{ slot.position.code }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <div class="mt-3 text-end">
+                            <a href="{% url 'scheduling:shift_calendar' %}" class="btn btn-sm btn-outline-info">View Full Calendar</a>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">You are not currently signed up for any upcoming shifts.</p>
+                        <a href="{% url 'scheduling:shift_calendar' %}" class="btn btn-sm btn-info">Sign up for a Shift</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-6 mb-4">
+            <div class="card h-100 shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">Profile & Certifications</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Badge Number:</strong> {{ profile.badge_number }}</p>
+                    <p><strong>Certifications:</strong></p>
+                    <ul class="list-unstyled">
+                        {% for cert in certifications %}
+                            <li>
+                                <span class="badge 
+                                    {% if cert.verification_status == 'APPROVED' and cert.expiration_date and cert.expiration_date < today %}bg-danger
+                                    {% elif cert.verification_status == 'APPROVED' %}bg-success
+                                    {% elif cert.verification_status == 'PENDING' %}bg-secondary
+                                    {% else %}bg-danger{% endif %} me-2">
+                                    {{ cert.verification_status }}
+                                </span>
+                                {{ cert.standard.name }} 
+                                {% if cert.expiration_date %}(Expires: {{ cert.expiration_date|date:"Y-m-d" }}){% endif %}
+                            </li>
+                        {% empty %}
+                            <li><span class="text-muted">No certifications on file.</span></li>
+                        {% endfor %}
+                    </ul>
+                    <div class="text-end">
+                        <a href="{% url 'accounts:profile_edit' %}" class="btn btn-sm btn-outline-warning">Update Profile / Upload Certs</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
