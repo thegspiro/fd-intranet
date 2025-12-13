@@ -1,67 +1,88 @@
-# inventory/forms.py
-
 from django import forms
-from .models import InventoryItem, StockLevel, Transaction
-from accounts.models import FireDeptUser
+from django.contrib.auth.models import User
+from .models import Asset, Category, MaintenanceLog, SupplyRequest, ASSET_STATUS_CHOICES
+from datetime import date
 
-# --- 1. Base Item Creation Form ---
+# --- 1. Category Form (Admin/Quartermaster) ---
 
-class InventoryItemForm(forms.ModelForm):
-    """Form to define a new type of inventory item."""
-    class Meta:
-        model = InventoryItem
-        fields = '__all__'
-
-# --- 2. Stock Level Update Form ---
-
-class StockLevelForm(forms.ModelForm):
-    """Form to manage stock levels at a specific location."""
-    class Meta:
-        model = StockLevel
-        fields = ['item', 'location', 'current_quantity']
-        
-        widgets = {
-            'item': forms.Select(attrs={'class': 'form-control'}),
-            'location': forms.TextInput(attrs={'placeholder': 'Main Station Stock, Truck 1'}),
-            'current_quantity': forms.NumberInput(attrs={'min': 0}),
-        }
-
-# --- 3. Transaction Recording Form (Assignment/Sale/Return) ---
-
-class TransactionForm(forms.ModelForm):
+class CategoryForm(forms.ModelForm):
     """
-    Form used by the Quartermaster to record movements of inventory.
-    The view will handle filtering the member based on the transaction type.
+    Form for creating or updating inventory categories.
     """
-    # Override fields to make member selection easier and more specific
-    member = forms.ModelChoiceField(
-        queryset=FireDeptUser.objects.all().order_by('last_name'),
-        label="Member",
-        required=True,
-        help_text="The member receiving or returning the item."
-    )
-    
     class Meta:
-        model = Transaction
-        fields = ['transaction_type', 'item', 'member', 'quantity', 'serial_number']
-        
-        widgets = {
-            'item': forms.Select(attrs={'class': 'form-control'}),
-            'transaction_type': forms.Select(attrs={'class': 'form-control'}),
-            'serial_number': forms.TextInput(attrs={'placeholder': 'Optional if not serialized'}),
-            'quantity': forms.NumberInput(attrs={'min': 1}),
-        }
+        model = Category
+        fields = ['name', 'description']
 
+
+# --- 2. Asset Form (Quartermaster) ---
+
+class AssetForm(forms.ModelForm):
+    """
+    Form for creating or updating a single trackable asset.
+    """
+    class Meta:
+        model = Asset
+        fields = [
+            'category', 'name', 'serial_number', 'asset_tag', 
+            'location', 'status', 'purchase_date', 'purchase_cost',
+            'last_inspection_date', 'next_inspection_date'
+        ]
+        widgets = {
+            'purchase_date': forms.DateInput(attrs={'type': 'date'}),
+            'last_inspection_date': forms.DateInput(attrs={'type': 'date'}),
+            'next_inspection_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Ensure categories are ordered
+        self.fields['category'].queryset = Category.objects.all().order_by('name')
+
+
+# --- 3. Maintenance Log Form (Quartermaster) ---
+
+class MaintenanceLogForm(forms.ModelForm):
+    """
+    Form for logging maintenance or repair activity on an asset.
+    """
+    class Meta:
+        model = MaintenanceLog
+        fields = ['asset', 'date_of_service', 'description', 'cost', 'new_next_inspection_date']
+        widgets = {
+            'date_of_service': forms.DateInput(attrs={'type': 'date'}),
+            'new_next_inspection_date': forms.DateInput(attrs={'type': 'date'}),
+            'asset': forms.HiddenInput(), # Asset is typically passed from the detail view
+        }
+        
     def clean(self):
         cleaned_data = super().clean()
-        item = cleaned_data.get('item')
-        serial_number = cleaned_data.get('serial_number')
-
-        # Logic: If item is serial tracked, serial_number must be provided
-        if item and item.serial_tracked and not serial_number:
-            raise forms.ValidationError(
-                "This item is serial-tracked. A unique serial number is required."
-            )
+        date_of_service = cleaned_data.get('date_of_service')
         
-        # Further validation (e.g., checking if enough stock exists) should be done in the view's post method.
+        if date_of_service and date_of_service > date.today():
+            raise forms.ValidationError("Date of service cannot be in the future.")
+            
         return cleaned_data
+
+
+# --- 4. Member Supply Request Form ---
+
+class SupplyRequestForm(forms.ModelForm):
+    """
+    Form for a standard member to submit a request for supplies.
+    (Status and processing fields are omitted.)
+    """
+    class Meta:
+        model = SupplyRequest
+        fields = ['item_description', 'quantity', 'justification']
+
+
+# --- 5. Quartermaster Supply Request Processing Form ---
+
+class SupplyRequestProcessForm(forms.ModelForm):
+    """
+    Form used by the Quartermaster to change the status of a request and add notes.
+    """
+    class Meta:
+        model = SupplyRequest
+        # Only allow Quartermaster to change status and add internal notes
+        fields = ['status', 'quartermaster_notes']
