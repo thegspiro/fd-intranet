@@ -1,80 +1,54 @@
-# accounts/forms.py
-
 from django import forms
-from django.contrib.auth.forms import UserChangeForm
-from django.contrib.auth.models import Group
-from .models import FireDeptUser, Certification, PersonnelRecord
+from django.contrib.auth.models import User
+from .models import UserProfile, MemberCertification, CertificationStandard
 
-# --- 1. Member Profile Update Form ---
+# --- 1. Profile Editing Form ---
 
-class MemberProfileForm(forms.ModelForm):
+class ProfileEditForm(forms.ModelForm):
     """
-    Form for members to submit changes to their own profile information.
-    Note: The view (MemberProfileUpdateView) handles saving this data to PendingChange.
+    Form for members to submit updates to their core profile data.
+    Note: Changes are submitted to the DataChangeRequest queue, 
+    NOT saved directly by this form's save() method.
     """
-    class Meta:
-        model = FireDeptUser
-        # These are the fields the member can initiate changes for.
-        fields = [
-            'first_name', 'last_name', 'address', 'city', 'state', 
-            'zip_code', 'phone_number', 'email'
-        ]
-        widgets = {
-            'email': forms.EmailInput(attrs={'placeholder': 'user@example.com'}),
-            'phone_number': forms.TextInput(attrs={'placeholder': 'XXX-XXX-XXXX'}),
-        }
     
+    # Fields from the User model (FirstName, LastName, Email)
+    first_name = forms.CharField(max_length=150, required=True, label="First Name")
+    last_name = forms.CharField(max_length=150, required=True, label="Last Name")
+    email = forms.EmailField(required=True, label="Email Address")
+
+    class Meta:
+        model = UserProfile
+        fields = ['badge_number', 'phone_number', 'date_of_birth']
+        widgets = {
+            # Use HTML5 date input for better user experience
+            'date_of_birth': forms.DateInput(attrs={'type': 'date'}),
+        }
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Prevent the user from changing their username via this form
-        if 'username' in self.fields:
-            self.fields['username'].disabled = True
+        # If an instance exists (which it should for an UpdateView)
+        if self.instance and self.instance.user:
+            # Populate the User fields that are being displayed in this form
+            self.fields['first_name'].initial = self.instance.user.first_name
+            self.fields['last_name'].initial = self.instance.user.last_name
+            self.fields['email'].initial = self.instance.user.email
 
-# --- 2. Certification/Document Upload Form ---
+    # We override save() in the view (accounts/views.py) to send data to the queue,
+    # rather than saving directly to the models.
+    def save(self, commit=True):
+        # Prevent direct saving here; the view handles creating the DataChangeRequest
+        return self.instance 
+
+# --- 2. Certification Upload Form ---
 
 class CertificationUploadForm(forms.ModelForm):
     """
-    Form for members to upload a document (e.g., CPR card) and set its expiration.
+    Form for members to upload a new certification document.
     """
-    certification = forms.ModelChoiceField(
-        queryset=Certification.objects.all(),
-        label="Certification Type",
-        help_text="Select the type of document you are uploading (e.g., EMT, CPR)."
-    )
-    
     class Meta:
-        model = PersonnelRecord
-        # The member only provides the file and expiration date
-        fields = ['certification', 'attachment_file', 'document_expiration']
+        model = MemberCertification
+        fields = ['standard', 'issue_date', 'expiration_date', 'document']
         widgets = {
-            'document_expiration': forms.DateInput(attrs={'type': 'date'}),
-            'attachment_file': forms.FileInput(attrs={'accept': '.pdf,.jpg,.png'})
+            'issue_date': forms.DateInput(attrs={'type': 'date'}),
+            'expiration_date': forms.DateInput(attrs={'type': 'date'}),
         }
-
-    # Custom validation could be added here to ensure the file is not too large or is a valid type.
-
-# --- 3. Administrative Role Assignment Form ---
-
-class RoleAssignmentAdminForm(forms.Form):
-    """
-    Form used by authorized leadership (Chief, President, etc.) to change a member's roles.
-    Note: This is an un-bound form used to process the POST request in RoleAssignmentView.
-    """
-    member = forms.ModelChoiceField(
-        queryset=FireDeptUser.objects.all().order_by('last_name'),
-        label="Select Member",
-        required=True
-    )
-    
-    roles = forms.ModelMultipleChoiceField(
-        queryset=Group.objects.all().order_by('name'),
-        widget=forms.CheckboxSelectMultiple,
-        label="Assigned Roles",
-        required=False,
-        help_text="Select all groups/roles this member should belong to."
-    )
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # We might dynamically update the member's current roles here if bound to an instance
-        pass
