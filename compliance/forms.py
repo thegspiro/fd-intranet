@@ -1,66 +1,71 @@
-# compliance/forms.py
-
 from django import forms
-from django.contrib.auth.models import Group
-from .models import ComplianceStandard, GroupProfile
+from .models import SafetyStandard, MemberComplianceRecord, SafetyNetConfiguration, SAFETY_NET_TYPE_CHOICES
+from accounts.models import CertificationStandard
+from scheduling.models import Position
+from django.contrib.auth.models import User
 
-# --- 1. Compliance Standard Configuration Form ---
+# --- 1. SafetyStandard Definition Form ---
 
-class ComplianceStandardForm(forms.ModelForm):
+class SafetyStandardForm(forms.ModelForm):
     """
-    Form to create or edit a requirement for a specific role (Group).
-    """
-    class Meta:
-        model = ComplianceStandard
-        fields = ['role', 'activity_type', 'required_quantity', 'time_period']
-        
-        widgets = {
-            'role': forms.Select(attrs={'class': 'form-control'}),
-            'activity_type': forms.Select(attrs={'class': 'form-control'}),
-            'time_period': forms.Select(attrs={'class': 'form-control'}),
-            'required_quantity': forms.NumberInput(attrs={'step': '0.1', 'min': '0'}),
-        }
-
-# --- 2. Group Profile/Metadata Form (For the Safety Net) ---
-
-class GroupProfileForm(forms.ModelForm):
-    """
-    Form to configure the metadata for a group, enabling the safety net monitoring.
-    This form is used when creating a new group or editing an existing one's metadata.
+    Form for creating or updating department-wide Safety Standards.
     """
     class Meta:
-        model = GroupProfile
-        fields = ['group', 'is_temporary', 'max_duration_days', 'warning_email_list']
+        model = SafetyStandard
+        fields = ['name', 'description', 'is_mandatory_annual', 'linked_certification']
         
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Filter certification choices to show only active standards
+        self.fields['linked_certification'].queryset = CertificationStandard.objects.all().order_by('name')
+
+
+# --- 2. MemberComplianceRecord Management Form ---
+
+class MemberComplianceRecordForm(forms.ModelForm):
+    """
+    Form for the Compliance Officer to record a member's compliance status
+    against a specific safety standard.
+    """
+    class Meta:
+        model = MemberComplianceRecord
+        fields = ['user', 'standard', 'is_compliant', 'date_met', 'notes']
         widgets = {
-            'group': forms.Select(attrs={'class': 'form-control', 'disabled': 'disabled'}), # Group should be set via the view
-            'is_temporary': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'warning_email_list': forms.Textarea(attrs={'rows': 3, 'placeholder': 'chief@dept.org, president@dept.org'}),
+            'date_met': forms.DateInput(attrs={'type': 'date'}),
         }
         
     def __init__(self, *args, **kwargs):
-        # We need to ensure the 'group' field is selectable if a GroupProfile doesn't exist,
-        # but is read-only if we are editing an existing one.
         super().__init__(*args, **kwargs)
-        if self.instance and self.instance.pk:
-            self.fields['group'].disabled = True
-        else:
-             # If creating new, show all existing groups without a profile
-            groups_with_profile = GroupProfile.objects.values_list('group_id', flat=True)
-            self.fields['group'].queryset = Group.objects.exclude(id__in=groups_with_profile)
+        # Filter users and standards
+        self.fields['user'].queryset = User.objects.filter(is_active=True).order_by('last_name')
+        self.fields['standard'].queryset = SafetyStandard.objects.all().order_by('name')
 
+    def clean(self):
+        cleaned_data = super().clean()
+        user = cleaned_data.get('user')
+        standard = cleaned_data.get('standard')
+        
+        # Ensure only one active record exists per user/standard (enforced by model unique_together)
+        # We can add custom validation here if needed, but the model constraint handles the hard stop.
 
-# --- 3. Reporting Filter Form ---
+        return cleaned_data
 
-class ComplianceReportForm(forms.Form):
+# --- 3. SafetyNetConfiguration Form ---
+
+class SafetyNetConfigurationForm(forms.ModelForm):
     """
-    Form for the Compliance Officer to define the time range for a compliance audit.
+    Form for defining custom safety net rules (manpower minimums, qualification overrides).
+    Uses JavaScript to dynamically show/hide the 'position' field based on the 'type'.
     """
-    start_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        required=True
-    )
-    end_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date'}),
-        required=True
-    )
+    class Meta:
+        model = SafetyNetConfiguration
+        fields = ['name', 'type', 'position', 'enforcement_value', 'is_active']
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Populate position choices
+        self.fields['position'].queryset = Position.objects.all().order_by('code')
+        
+        # Add a custom attribute to the type field for JavaScript targeting
+        self.fields['type'].widget.attrs.update({'id': 'id
