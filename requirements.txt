@@ -1,0 +1,26 @@
+# Django Framework and Core Utils
+Django>=4.2,<5.0
+python-dotenv  # For loading environment variables securely
+psycopg2-binary  # Database driver for PostgreSQL (Replace with 'mysqlclient' if using MySQL)
+gunicorn # WSGI HTTP Server for production deployment
+
+# Security and Authentication
+django-otp # Core OTP support
+django-two-factor-auth # Mandatory 2FA implementation
+pyotp # Dependency for generating OTPs
+qrcode # Dependency for generating 2FA QR codes
+python-social-auth[django] # Base for social authentication (SSO)
+social-auth-app-django
+
+# Specific Social Authentication Backends
+social-auth-core[google] # For Google SSO
+social-auth-core[azuread] # For Microsoft/Azure AD SSO
+
+# File Handling and Image Processing
+Pillow # Required for image manipulation and file validations
+
+# Email and Messaging (Required for notifications, alerts, and 2FA recovery)
+sendgrid # Example: Replace with your chosen email provider's library if different (e.g., Mailgun)
+
+# Utility and Development (Optional but Recommended)
+django-debug-toolbar # Excellent tool for local development performance tracing
