@@ -5,10 +5,12 @@ import sys
 
 def main():
     """Run administrative tasks."""
-    # ADDED LINE: Insert the current directory (project root) into Python's path
-    # This allows 'fd_intranet' to be found.
-    sys.path.insert(0, os.path.join(os.getcwd(), 'fd_intranet')) 
     
+    # CRITICAL FIX: Ensure the directory containing the inner 'fd_intranet' 
+    # module is on the path. This handles non-standard project creation.
+    current_path = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, current_path)
+
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fd_intranet.settings')
     try:
         from django.core.management import execute_from_command_line
