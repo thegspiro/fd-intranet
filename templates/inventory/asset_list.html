@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Asset Directory{% endblock %}
+
+{% block content %}
+    <h1>🚚 Asset Directory</h1>
+    <hr>
+    
+    <div class="d-flex justify-content-between mb-3">
+        <div>
+            <a href="{% url 'inventory:asset_create' %}" class="btn btn-success">➕ Add New Asset</a>
+            <a href="{% url 'inventory:quartermaster_dashboard' %}" class="btn btn-outline-secondary">QM Dashboard</a>
+        </div>
+        
+        <form method="get" class="d-flex align-items-center">
+            <select name="category" onchange="this.form.submit()" class="form-select form-select-sm me-2">
+                <option value="">Filter by Category</option>
+                {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if request.GET.category|slugify == cat.id|slugify %}selected{% endif %}>{{ cat.name }}</option>
+                {% endfor %}
+            </select>
+            <select name="status" onchange="this.form.submit()" class="form-select form-select-sm me-2">
+                <option value="">Filter by Status</option>
+                <option value="SERVICE" {% if request.GET.status == 'SERVICE' %}selected{% endif %}>In Service</option>
+                <option value="OUT" {% if request.GET.status == 'OUT' %}selected{% endif %}>Out of Service</option>
+                <option value="RETIRED" {% if request.GET.status == 'RETIRED' %}selected{% endif %}>Retired</option>
+            </select>
+            <a href="{% url 'inventory:asset_list' %}" class="btn btn-sm btn-outline-danger">Clear</a>
+        </form>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-light">
+            <h5 class="mb-0">Asset List</h5>
+        </div>
+        <div class="card-body">
+            <table class="table table-striped table-hover">
+                <thead>
+                    <tr>
+                        <th>Asset Tag</th>
+                        <th>Name</th>
+                        <th>Category</th>
+                        <th>Location</th>
+                        <th>Status</th>
+                        <th>Next Insp.</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for asset in assets %}
+                    <tr>
+                        <td><strong>{{ asset.asset_tag|default_if_none:asset.serial_number|default_if_none:"N/A" }}</strong></td>
+                        <td>{{ asset.name }}</td>
+                        <td>{{ asset.category.name }}</td>
+                        <td>{{ asset.location }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if asset.status == 'SERVICE' %}bg-success
+                                {% elif asset.status == 'OUT' %}bg-warning text-dark
+                                {% else %}bg-secondary{% endif %}">
+                                {{ asset.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if asset.next_inspection_date %}
+                                {{ asset.next_inspection_date|date:"Y-m-d" }}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'inventory:asset_detail' asset.pk %}" class="btn btn-sm btn-outline-info">View</a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-muted">No assets match your current filter.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% endblock %}
