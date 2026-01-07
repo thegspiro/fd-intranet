@@ -1,0 +1,275 @@
+{% extends "base.html" %}
+
+{% block title %}System Configuration{% if is_initial_setup %} - Setup Wizard{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            {% if is_initial_setup %}
+            <div class="alert alert-info" role="alert">
+                <h4 class="alert-heading"><i class="bi bi-info-circle-fill"></i> Welcome to Fire Department Intranet Setup!</h4>
+                <p>This is the initial configuration wizard. Please provide information about your department and configure security settings.</p>
+                <hr>
+                <p class="mb-0"><strong>Note:</strong> You can change these settings later via Admin Panel → System Configuration</p>
+            </div>
+            {% endif %}
+            
+            <div class="card shadow-lg">
+                <div class="card-header bg-danger text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-gear-fill"></i> System Configuration
+                        {% if not is_initial_setup %}<small class="ms-2">(Advanced Settings)</small>{% endif %}
+                    </h3>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" id="configForm">
+                        {% csrf_token %}
+                        
+                        <!-- Department Information Section -->
+                        <div class="mb-5">
+                            <h4 class="border-bottom pb-2 mb-4">
+                                <i class="bi bi-building"></i> Department Information
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-8 mb-3">
+                                    <label for="{{ form.department_name.id_for_label }}" class="form-label">
+                                        <strong>Department Name</strong> <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.department_name }}
+                                    {% if form.department_name.errors %}
+                                        <div class="text-danger">{{ form.department_name.errors }}</div>
+                                    {% endif %}
+                                    <small class="text-muted">Official name of your fire department</small>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.department_abbreviation.id_for_label }}" class="form-label">
+                                        <strong>Abbreviation</strong>
+                                    </label>
+                                    {{ form.department_abbreviation }}
+                                    <small class="text-muted">e.g., VFD, FD</small>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.timezone.id_for_label }}" class="form-label">
+                                    <strong>Timezone</strong> <span class="text-danger">*</span>
+                                </label>
+                                {{ form.timezone }}
+                                {% if form.timezone.errors %}
+                                    <div class="text-danger">{{ form.timezone.errors }}</div>
+                                {% endif %}
+                                <small class="text-muted">All timestamps will use this timezone</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Geographic Security Section -->
+                        <div class="mb-5">
+                            <h4 class="border-bottom pb-2 mb-4">
+                                <i class="bi bi-globe"></i> Geographic Security Settings
+                            </h4>
+                            
+                            <div class="alert alert-warning" role="alert">
+                                <h5 class="alert-heading"><i class="bi bi-exclamation-triangle-fill"></i> Important Security Information</h5>
+                                <p><strong>Geographic IP blocking</strong> restricts system access based on the user's location. Only users from specified countries can access the system.</p>
+                                <ul class="mb-0">
+                                    <li><strong>Primary Country:</strong> Users from this country automatically have access</li>
+                                    <li><strong>Secondary Country:</strong> Optional. Useful for departments on country borders</li>
+                                    <li><strong>Example:</strong> A department on the US-Canada border might set Primary=US and Secondary=CA</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    {{ form.geo_security_enabled }}
+                                    <label class="form-check-label" for="{{ form.geo_security_enabled.id_for_label }}">
+                                        <strong>Enable Geographic IP Security</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted">{{ form.geo_security_enabled.help_text }}</small>
+                            </div>
+                            
+                            <div class="row" id="countrySettings">
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.primary_country.id_for_label }}" class="form-label">
+                                        <strong>🟢 Primary Country</strong> <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.primary_country }}
+                                    {% if form.primary_country.errors %}
+                                        <div class="text-danger">{{ form.primary_country.errors }}</div>
+                                    {% endif %}
+                                    <small class="text-muted d-block">{{ form.primary_country.help_text }}</small>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="{{ form.secondary_country.id_for_label }}" class="form-label">
+                                        <strong>🔵 Secondary Country</strong> <small class="text-muted">(Optional)</small>
+                                    </label>
+                                    {{ form.secondary_country }}
+                                    {% if form.secondary_country.errors %}
+                                        <div class="text-danger">{{ form.secondary_country.errors }}</div>
+                                    {% endif %}
+                                    <small class="text-muted d-block">{{ form.secondary_country.help_text }}</small>
+                                </div>
+                            </div>
+                            
+                            {% if not is_initial_setup %}
+                            <div class="mb-3">
+                                <label for="{{ form.change_reason.id_for_label }}" class="form-label">
+                                    <strong>Reason for Country Change</strong> 
+                                    <span class="text-danger">* (Required if changing countries)</span>
+                                </label>
+                                {{ form.change_reason }}
+                                <small class="text-muted d-block">
+                                    Leadership team will be notified of any country changes. 
+                                    Please explain why you are making this change.
+                                </small>
+                            </div>
+                            
+                            <div class="alert alert-danger" role="alert">
+                                <strong>⚠️ WARNING:</strong> Changing allowed countries affects ALL users immediately.
+                                Leadership will be notified via email.
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Contact Information Section -->
+                        <div class="mb-5">
+                            <h4 class="border-bottom pb-2 mb-4">
+                                <i class="bi bi-envelope"></i> Contact Information
+                            </h4>
+                            
+                            <div class="row">
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.admin_email.id_for_label }}" class="form-label">
+                                        <strong>Admin Email</strong>
+                                    </label>
+                                    {{ form.admin_email }}
+                                    <small class="text-muted">Primary administrator</small>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.it_email.id_for_label }}" class="form-label">
+                                        <strong>IT Support Email</strong>
+                                    </label>
+                                    {{ form.it_email }}
+                                    <small class="text-muted">Technical support</small>
+                                </div>
+                                
+                                <div class="col-md-4 mb-3">
+                                    <label for="{{ form.security_email.id_for_label }}" class="form-label">
+                                        <strong>Security Email</strong>
+                                    </label>
+                                    {{ form.security_email }}
+                                    <small class="text-muted">Security alerts</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+                        
+                        <!-- Submit Button -->
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-danger btn-lg">
+                                <i class="bi bi-save"></i> 
+                                {% if is_initial_setup %}Complete Setup{% else %}Save Configuration{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                {% if not is_initial_setup %}
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Configuration History:</strong>
+                        {% if config.primary_country_changed_at %}
+                            Primary country last changed {{ config.primary_country_changed_at|timesince }} ago
+                            by {{ config.primary_country_changed_by.get_full_name }}
+                        {% else %}
+                            No country changes recorded
+                        {% endif %}
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+            
+            {% if not is_initial_setup %}
+            <div class="mt-4 text-center">
+                <a href="{% url 'admin:core_systemconfiguration_changelist' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Admin
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const geoSecurityCheckbox = document.getElementById('{{ form.geo_security_enabled.id_for_label }}');
+    const countrySettings = document.getElementById('countrySettings');
+    
+    function toggleCountrySettings() {
+        if (geoSecurityCheckbox.checked) {
+            countrySettings.style.display = 'flex';
+        } else {
+            countrySettings.style.display = 'none';
+        }
+    }
+    
+    geoSecurityCheckbox.addEventListener('change', toggleCountrySettings);
+    toggleCountrySettings(); // Initial state
+    
+    // Confirmation for country changes
+    {% if not is_initial_setup %}
+    const form = document.getElementById('configForm');
+    const primaryCountry = document.getElementById('{{ form.primary_country.id_for_label }}');
+    const secondaryCountry = document.getElementById('{{ form.secondary_country.id_for_label }}');
+    const originalPrimary = primaryCountry.value;
+    const originalSecondary = secondaryCountry.value;
+    
+    form.addEventListener('submit', function(e) {
+        const primaryChanged = primaryCountry.value !== originalPrimary;
+        const secondaryChanged = secondaryCountry.value !== originalSecondary;
+        
+        if (primaryChanged || secondaryChanged) {
+            const confirmed = confirm(
+                '⚠️ WARNING: You are changing the geographic security configuration!\n\n' +
+                'This will affect ALL users immediately.\n' +
+                'Leadership team will be notified via email.\n\n' +
+                'Are you sure you want to continue?'
+            );
+            
+            if (!confirmed) {
+                e.preventDefault();
+                return false;
+            }
+        }
+    });
+    {% endif %}
+});
+</script>
+
+<style>
+    .form-label strong {
+        font-weight: 600;
+    }
+    
+    .alert-heading {
+        font-size: 1.1rem;
+    }
+    
+    #countrySettings {
+        transition: opacity 0.3s;
+    }
+</style>
+{% endblock %}
