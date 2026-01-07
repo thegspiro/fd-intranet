@@ -50,6 +50,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # Custom security middleware
+    'core.middleware.GeographicSecurityMiddleware',  # Geographic IP blocking
+    'core.middleware.SecurityHeadersMiddleware',      # Additional security headers
 ]
 
 ROOT_URLCONF = 'core.urls'
