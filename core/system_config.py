@@ -1,0 +1,495 @@
+"""
+System Configuration Model
+Singleton pattern for global system settings including geographic security
+"""
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+from django.utils import timezone
+from core.notifications import NotificationManager, NotificationType, NotificationPriority
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class SystemConfiguration(models.Model):
+    """
+    Singleton model for system-wide configuration
+    Only one record should ever exist
+    
+    IMPORTANT: Settings here affect security and should only be changed
+    by system administrators
+    """
+    
+    # Country configuration for geographic security
+    COUNTRY_CHOICES = [
+        ('US', 'United States'),
+        ('CA', 'Canada'),
+        ('GB', 'United Kingdom'),
+        ('AU', 'Australia'),
+        ('NZ', 'New Zealand'),
+        ('IE', 'Ireland'),
+        ('MX', 'Mexico'),
+        ('DE', 'Germany'),
+        ('FR', 'France'),
+        ('ES', 'Spain'),
+        ('IT', 'Italy'),
+        ('NL', 'Netherlands'),
+        ('BE', 'Belgium'),
+        ('CH', 'Switzerland'),
+        ('AT', 'Austria'),
+        ('SE', 'Sweden'),
+        ('NO', 'Norway'),
+        ('DK', 'Denmark'),
+        ('FI', 'Finland'),
+        ('PL', 'Poland'),
+        ('JP', 'Japan'),
+        ('KR', 'South Korea'),
+        ('SG', 'Singapore'),
+        ('BR', 'Brazil'),
+        ('AR', 'Argentina'),
+        ('CL', 'Chile'),
+        ('ZA', 'South Africa'),
+        # Add more as needed
+    ]
+    
+    # Department Information
+    department_name = models.CharField(
+        max_length=200,
+        default='Fire Department',
+        help_text="Official department name"
+    )
+    
+    department_abbreviation = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Short name or abbreviation (e.g., 'VFD', 'FD')"
+    )
+    
+    timezone = models.CharField(
+        max_length=50,
+        default='America/New_York',
+        help_text="Department timezone (e.g., 'America/New_York', 'Europe/London')"
+    )
+    
+    # Geographic Security Settings
+    primary_country = models.CharField(
+        max_length=2,
+        choices=COUNTRY_CHOICES,
+        default='US',
+        help_text="Primary country for geographic access control. "
+                  "Users from this country are automatically allowed access."
+    )
+    
+    secondary_country = models.CharField(
+        max_length=2,
+        choices=COUNTRY_CHOICES,
+        blank=True,
+        null=True,
+        help_text="Optional secondary country (for border departments). "
+                  "Users from this country are also automatically allowed."
+    )
+    
+    geo_security_enabled = models.BooleanField(
+        default=True,
+        help_text="Enable geographic IP restrictions. "
+                  "When enabled, only users from primary/secondary countries can access."
+    )
+    
+    # Change tracking
+    primary_country_changed_at = models.DateTimeField(null=True, blank=True)
+    primary_country_changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='primary_country_changes'
+    )
+    previous_primary_country = models.CharField(max_length=2, blank=True)
+    
+    secondary_country_changed_at = models.DateTimeField(null=True, blank=True)
+    secondary_country_changed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='secondary_country_changes'
+    )
+    previous_secondary_country = models.CharField(max_length=2, blank=True)
+    
+    # Contact Information
+    admin_email = models.EmailField(
+        blank=True,
+        help_text="Primary administrator email"
+    )
+    
+    it_email = models.EmailField(
+        blank=True,
+        help_text="IT support email"
+    )
+    
+    security_email = models.EmailField(
+        blank=True,
+        help_text="Security team email"
+    )
+    
+    # Setup tracking
+    setup_completed = models.BooleanField(default=False)
+    setup_completed_at = models.DateTimeField(null=True, blank=True)
+    setup_completed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='system_setups'
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'System Configuration'
+        verbose_name_plural = 'System Configuration'
+    
+    def __str__(self):
+        return f"System Configuration - {self.department_name}"
+    
+    def save(self, *args, **kwargs):
+        """
+        Enforce singleton pattern and track country changes
+        """
+        # Check if this is an update to an existing config
+        if self.pk:
+            # Get the old instance to compare
+            old_instance = SystemConfiguration.objects.get(pk=self.pk)
+            
+            # Check if primary country changed
+            if old_instance.primary_country != self.primary_country:
+                self.previous_primary_country = old_instance.primary_country
+                self.primary_country_changed_at = timezone.now()
+                
+                # Log the change
+                logger.critical(
+                    f"PRIMARY COUNTRY CHANGED: {old_instance.primary_country} → {self.primary_country} "
+                    f"by {self.primary_country_changed_by}"
+                )
+                
+                # Send notifications
+                self._notify_country_change(
+                    'primary',
+                    old_instance.primary_country,
+                    self.primary_country
+                )
+            
+            # Check if secondary country changed
+            if old_instance.secondary_country != self.secondary_country:
+                self.previous_secondary_country = old_instance.secondary_country or ''
+                self.secondary_country_changed_at = timezone.now()
+                
+                logger.warning(
+                    f"SECONDARY COUNTRY CHANGED: {old_instance.secondary_country} → {self.secondary_country} "
+                    f"by {self.secondary_country_changed_by}"
+                )
+                
+                # Send notifications
+                self._notify_country_change(
+                    'secondary',
+                    old_instance.secondary_country,
+                    self.secondary_country
+                )
+        
+        # Enforce singleton - only one configuration record allowed
+        if not self.pk and SystemConfiguration.objects.exists():
+            raise ValidationError(
+                'Only one System Configuration record is allowed. '
+                'Please edit the existing configuration instead of creating a new one.'
+            )
+        
+        super().save(*args, **kwargs)
+    
+    def _notify_country_change(self, country_type, old_country, new_country):
+        """
+        Send critical security notification when allowed countries change
+        
+        Args:
+            country_type: 'primary' or 'secondary'
+            old_country: Previous country code
+            new_country: New country code
+        """
+        from django.contrib.auth.models import Group
+        from core.audit import AuditLog
+        
+        # Get leadership team (Chief Officers and Compliance Officers)
+        leadership = User.objects.filter(
+            groups__name__in=['Chief Officers', 'Compliance Officers'],
+            is_active=True
+        ).distinct()
+        
+        if not leadership:
+            logger.error("No leadership users found to notify of country change")
+            return
+        
+        # Build message
+        old_name = dict(self.COUNTRY_CHOICES).get(old_country, old_country) if old_country else 'None'
+        new_name = dict(self.COUNTRY_CHOICES).get(new_country, new_country) if new_country else 'None'
+        
+        subject = f"🚨 CRITICAL: Geographic Security Configuration Changed - {country_type.title()} Country"
+        
+        message = f"""
+CRITICAL SECURITY CONFIGURATION CHANGE
+
+{'='*60}
+GEOGRAPHIC ACCESS CONTROL UPDATED
+{'='*60}
+
+Configuration Type: {country_type.upper()} COUNTRY
+Previous Value: {old_name} ({old_country if old_country else 'None'})
+New Value: {new_name} ({new_country if new_country else 'None'})
+Changed By: {self.primary_country_changed_by.get_full_name() if country_type == 'primary' else self.secondary_country_changed_by.get_full_name()}
+Changed At: {timezone.now().strftime('%Y-%m-%d %H:%M:%S %Z')}
+
+IMPACT:
+{'='*60}
+
+{self._get_impact_description(country_type, old_country, new_country)}
+
+SECURITY IMPLICATIONS:
+{'='*60}
+
+- All users from {new_name} can now access the system without exceptions
+{f"- Users from {old_name} are now BLOCKED by default" if old_country and old_country != new_country else ""}
+- Existing international access exceptions remain valid
+- All access attempts are logged for audit purposes
+- This change is effective immediately
+
+REQUIRED ACTIONS:
+{'='*60}
+
+1. VERIFY: Confirm this change was authorized and expected
+2. REVIEW: Check all active international access exceptions
+3. COMMUNICATE: Inform all affected members of this change
+4. MONITOR: Watch for unusual access patterns over next 48 hours
+
+AUDIT TRAIL:
+{'='*60}
+
+This change has been logged in the system audit trail.
+Review: Admin Panel → Audit Logs → Filter by action: "SETTING_CHANGE"
+
+If this change was NOT authorized:
+1. IMMEDIATELY revert the change in Admin Panel → System Configuration
+2. Contact security team: {self.security_email or 'security@yourfiredept.org'}
+3. Review admin account access logs
+4. Change all administrative passwords
+
+{'='*60}
+This is an automated security notification.
+System Configuration: {self.department_name}
+        """.strip()
+        
+        # Send high-priority notification to leadership
+        NotificationManager.send_notification(
+            notification_type=NotificationType.GENERAL_ANNOUNCEMENT,
+            recipients=list(leadership),
+            subject=subject,
+            message=message,
+            priority=NotificationPriority.URGENT,
+            context={
+                'country_type': country_type,
+                'old_country': old_country,
+                'new_country': new_country,
+                'changed_by': self.primary_country_changed_by.username if country_type == 'primary' else self.secondary_country_changed_by.username
+            }
+        )
+        
+        # Also log to audit trail
+        AuditLog.log(
+            'SETTING_CHANGE',
+            user=self.primary_country_changed_by if country_type == 'primary' else self.secondary_country_changed_by,
+            success=True,
+            risk_level='CRITICAL',
+            setting_name=f'{country_type}_country',
+            old_value=old_country,
+            new_value=new_country,
+            department=self.department_name
+        )
+    
+    def _get_impact_description(self, country_type, old_country, new_country):
+        """Generate description of impact based on change"""
+        old_name = dict(self.COUNTRY_CHOICES).get(old_country, old_country) if old_country else 'None'
+        new_name = dict(self.COUNTRY_CHOICES).get(new_country, new_country) if new_country else 'None'
+        
+        if country_type == 'primary':
+            if not old_country:
+                return f"• Initial configuration: {new_name} is now the primary allowed country"
+            elif not new_country:
+                return "• PRIMARY COUNTRY REMOVED: No automatic access allowed!"
+            else:
+                return f"""• Users from {new_name} can now access automatically
+• Users from {old_name} now require international access exceptions
+• This affects ALL members - existing sessions may be terminated"""
+        else:  # secondary
+            if not old_country and new_country:
+                return f"• Secondary country ADDED: Users from {new_name} can now access automatically"
+            elif old_country and not new_country:
+                return f"• Secondary country REMOVED: Users from {old_name} now require exceptions"
+            elif old_country and new_country:
+                return f"• Secondary country changed from {old_name} to {new_name}"
+            else:
+                return "• No secondary country configured"
+    
+    @classmethod
+    def get_config(cls):
+        """
+        Get or create the singleton configuration instance
+        
+        Returns:
+            SystemConfiguration instance
+        """
+        config, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                'department_name': 'Fire Department',
+                'primary_country': 'US',
+                'geo_security_enabled': True
+            }
+        )
+        
+        if created:
+            logger.info("System configuration created with default values")
+        
+        return config
+    
+    def is_country_allowed(self, country_code):
+        """
+        Check if a country code is in the allowed list
+        
+        Args:
+            country_code: ISO 3166-1 alpha-2 country code (e.g., 'US', 'CA')
+            
+        Returns:
+            bool: True if country is allowed
+        """
+        if not self.geo_security_enabled:
+            return True
+        
+        # Check primary country
+        if country_code == self.primary_country:
+            return True
+        
+        # Check secondary country if configured
+        if self.secondary_country and country_code == self.secondary_country:
+            return True
+        
+        return False
+    
+    def get_allowed_countries(self):
+        """
+        Get list of allowed country codes
+        
+        Returns:
+            list: Country codes that are allowed
+        """
+        countries = [self.primary_country]
+        if self.secondary_country:
+            countries.append(self.secondary_country)
+        return countries
+    
+    def get_allowed_country_names(self):
+        """
+        Get list of allowed country names (human-readable)
+        
+        Returns:
+            list: Country names
+        """
+        country_dict = dict(self.COUNTRY_CHOICES)
+        names = [country_dict.get(self.primary_country, self.primary_country)]
+        if self.secondary_country:
+            names.append(country_dict.get(self.secondary_country, self.secondary_country))
+        return names
+
+
+class CountryChangeLog(models.Model):
+    """
+    Immutable log of all country configuration changes
+    Separate from SystemConfiguration for audit purposes
+    """
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    
+    change_type = models.CharField(
+        max_length=20,
+        choices=[
+            ('PRIMARY', 'Primary Country Change'),
+            ('SECONDARY', 'Secondary Country Change'),
+            ('GEO_SECURITY', 'Geographic Security Enabled/Disabled'),
+        ]
+    )
+    
+    old_value = models.CharField(max_length=50, blank=True)
+    new_value = models.CharField(max_length=50)
+    
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    
+    # Leadership notification tracking
+    leadership_notified = models.BooleanField(default=False)
+    leadership_notified_at = models.DateTimeField(null=True, blank=True)
+    notification_recipient_count = models.IntegerField(default=0)
+    
+    # Justification
+    change_reason = models.TextField(
+        blank=True,
+        help_text="Why was this change made?"
+    )
+    
+    class Meta:
+        ordering = ['-timestamp']
+        verbose_name = 'Country Change Log'
+        verbose_name_plural = 'Country Change Logs'
+    
+    def __str__(self):
+        return f"{self.get_change_type_display()} - {self.timestamp.strftime('%Y-%m-%d %H:%M')}"
+    
+    @classmethod
+    def log_change(cls, change_type, old_value, new_value, changed_by, request=None, reason=''):
+        """
+        Create an immutable log entry for country changes
+        
+        Args:
+            change_type: Type of change
+            old_value: Previous value
+            new_value: New value
+            changed_by: User who made the change
+            request: HTTP request object
+            reason: Justification for change
+        """
+        ip = None
+        user_agent = ''
+        
+        if request:
+            x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+            if x_forwarded_for:
+                ip = x_forwarded_for.split(',')[0].strip()
+            else:
+                ip = request.META.get('REMOTE_ADDR')
+            user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
+        
+        log = cls.objects.create(
+            changed_by=changed_by,
+            change_type=change_type,
+            old_value=old_value,
+            new_value=new_value,
+            ip_address=ip,
+            user_agent=user_agent,
+            change_reason=reason
+        )
+        
+        logger.critical(
+            f"COUNTRY CONFIGURATION CHANGED: {change_type} | "
+            f"From: {old_value} → To: {new_value} | "
+            f"By: {changed_by.username} | IP: {ip}"
+        )
+        
+        return log
