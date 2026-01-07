@@ -51,8 +51,9 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # Custom security middleware
-    'core.middleware.GeographicSecurityMiddleware',  # Geographic IP blocking
-    'core.middleware.SecurityHeadersMiddleware',      # Additional security headers
+    'core.middleware.CurrentUserMiddleware',              # Track current user for audit
+    'core.middleware.GeographicSecurityMiddleware',       # Geographic IP blocking
+    'core.middleware.SecurityHeadersMiddleware',          # Additional security headers
 ]
 
 ROOT_URLCONF = 'core.urls'
@@ -182,6 +183,25 @@ X_FRAME_OPTIONS = 'DENY'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Geographic IP Security
+GEO_SECURITY_ENABLED = env.bool('GEO_SECURITY_ENABLED', default=True)
+# Automatically disabled in DEBUG mode for development
+if DEBUG:
+    GEO_SECURITY_ENABLED = False
+
+# Caching for geolocation lookups
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': env('REDIS_URL', default='redis://127.0.0.1:6379/1'),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'fd_intranet',
+        'TIMEOUT': 86400,  # 24 hours
+    }
+}
 
 # Login URLs
 LOGIN_URL = '/accounts/login/'
