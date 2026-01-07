@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Fire Department Intranet{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="jumbotron bg-fire text-white p-5 rounded">
+            <h1 class="display-4">
+                <i class="bi bi-fire"></i> Welcome, {{ user.get_full_name|default:user.username }}!
+            </h1>
+            <p class="lead">Fire Department Intranet System</p>
+            <hr class="my-4 bg-white">
+            <p>Manage shifts, training, gear, compliance, and more - all in one place.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">My Upcoming Shifts</h6>
+                        <h2 class="mb-0">{{ upcoming_shifts_count|default:0 }}</h2>
+                    </div>
+                    <div class="text-fire">
+                        <i class="bi bi-calendar-week" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <a href="{% url 'scheduling:shift_calendar' %}" class="btn btn-sm btn-outline-fire mt-3 w-100">
+                    View Shifts <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Training Compliance</h6>
+                        <h2 class="mb-0">{{ training_compliance|default:"N/A" }}%</h2>
+                    </div>
+                    <div class="text-success">
+                        <i class="bi bi-clipboard-check" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <a href="{% url 'training:dashboard' %}" class="btn btn-sm btn-outline-success mt-3 w-100">
+                    View Training <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Assigned Gear</h6>
+                        <h2 class="mb-0">{{ assigned_gear_count|default:0 }}</h2>
+                    </div>
+                    <div class="text-primary">
+                        <i class="bi bi-box-seam" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <a href="{% url 'quartermaster:dashboard' %}" class="btn btn-sm btn-outline-primary mt-3 w-100">
+                    View Gear <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card stat-card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-2">Compliance Status</h6>
+                        <h2 class="mb-0">
+                            {% if compliance_current %}
+                                <span class="text-success"><i class="bi bi-check-circle-fill"></i></span>
+                            {% else %}
+                                <span class="text-warning"><i class="bi bi-exclamation-triangle-fill"></i></span>
+                            {% endif %}
+                        </h2>
+                    </div>
+                    <div class="text-info">
+                        <i class="bi bi-shield-check" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+                <a href="{% url 'compliance:dashboard' %}" class="btn btn-sm btn-outline-info mt-3 w-100">
+                    View Compliance <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Quick Actions -->
+    <div class="col-lg-8 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-lightning-charge"></i> Quick Actions</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <a href="{% url 'scheduling:shift_calendar' %}" class="btn btn-outline-fire w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="bi bi-calendar-plus" style="font-size: 2rem;"></i>
+                            <span class="mt-2">Sign Up for Shift</span>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'training:upload_record' %}" class="btn btn-outline-success w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="bi bi-upload" style="font-size: 2rem;"></i>
+                            <span class="mt-2">Upload Training</span>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'quartermaster:request_gear' %}" class="btn btn-outline-primary w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="bi bi-cart-plus" style="font-size: 2rem;"></i>
+                            <span class="mt-2">Request Gear</span>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'documents:library' %}" class="btn btn-outline-secondary w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="bi bi-file-earmark-text" style="font-size: 2rem;"></i>
+                            <span class="mt-2">Browse Documents</span>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'training:sessions' %}" class="btn btn-outline-warning w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="bi bi-calendar-event" style="font-size: 2rem;"></i>
+                            <span class="mt-2">Training Sessions</span>
+                        </a>
+                    </div>
+                    <div class="col-md-4">
+                        <a href="{% url 'archives:dashboard' %}" class="btn btn-outline-info w-100 h-100 d-flex flex-column justify-content-center align-items-center py-4">
+                            <i class="bi bi-archive" style="font-size: 2rem;"></i>
+                            <span class="mt-2">View Archives</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notifications & Alerts -->
+    <div class="col-lg-4 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-bell"></i> Notifications</h5>
+            </div>
+            <div class="card-body">
+                {% if alerts %}
+                <div class="list-group list-group-flush">
+                    {% for alert in alerts %}
+                    <div class="list-group-item px-0">
+                        <div class="d-flex w-100 justify-content-between">
+                            <h6 class="mb-1">
+                                {% if alert.type == 'warning' %}
+                                <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                                {% elif alert.type == 'info' %}
+                                <i class="bi bi-info-circle-fill text-info"></i>
+                                {% else %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                {% endif %}
+                                {{ alert.title }}
+                            </h6>
+                            <small class="text-muted">{{ alert.date }}</small>
+                        </div>
+                        <p class="mb-1 small">{{ alert.message }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center text-muted py-4">
+                    <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                    <p class="mt-2">No new notifications</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Quick Links (if applicable) -->
+{% if user.is_staff or user.groups.exists %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-gear"></i> Administration</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% if user.groups.filter|name='Chief Officers' or user.is_staff %}
+                    <div class="col-md-3">
+                        <a href="{% url 'admin:index' %}" class="btn btn-outline-dark w-100">
+                            <i class="bi bi-gear-fill"></i> Admin Panel
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.groups.filter|name='Training Officers' %}
+                    <div class="col-md-3">
+                        <a href="{% url 'training:officer_dashboard' %}" class="btn btn-outline-success w-100">
+                            <i class="bi bi-clipboard-check"></i> Training Officer
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.groups.filter|name='Quartermaster' %}
+                    <div class="col-md-3">
+                        <a href="{% url 'quartermaster:qm_dashboard' %}" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-box-seam"></i> Quartermaster
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.groups.filter|name='Compliance Officers' %}
+                    <div class="col-md-3">
+                        <a href="{% url 'compliance:officer_dashboard' %}" class="btn btn-outline-info w-100">
+                            <i class="bi bi-shield-check"></i> Compliance Officer
+                        </a>
+                    </div>
+                    {% endif %}
+                    
+                    {% if user.groups.filter|name__in='Chief Officers,Secretary' %}
+                    <div class="col-md-3">
+                        <a href="{% url 'documents:management_dashboard' %}" class="btn btn-outline-secondary w-100">
+                            <i class="bi bi-file-earmark-text"></i> Document Manager
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
