@@ -6,9 +6,32 @@ from django.urls import reverse
 from django.contrib import messages
 from django.conf import settings
 from core.geo_security import GeoSecurityService
+from threading import current_thread
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+class CurrentUserMiddleware:
+    """
+    Store current user in thread-local storage
+    This allows models to access the current user for audit logging
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+    
+    def __call__(self, request):
+        # Store user in thread-local storage
+        current_thread().user = getattr(request, 'user', None)
+        
+        try:
+            response = self.get_response(request)
+        finally:
+            # Clean up
+            if hasattr(current_thread(), 'user'):
+                delattr(current_thread(), 'user')
+        
+        return response
 
 
 class GeographicSecurityMiddleware:
