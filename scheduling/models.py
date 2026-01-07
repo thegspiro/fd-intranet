@@ -1,6 +1,8 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from accounts.models import CertificationStandard
+
 
 # --- Model 1: Position ---
 
@@ -70,4 +72,107 @@ class ShiftSlotTemplate(models.Model):
 
 # --- Model 4: Shift (The actual scheduled event) ---
 
-class Shift(
+class Shift(models.Model):
+    """
+    Represents an actual scheduled shift instance created from a ShiftTemplate.
+    Contains the specific date, times, and staffing status.
+    """
+    date = models.DateField(help_text="The calendar date this shift occurs.")
+    shift_template = models.ForeignKey(ShiftTemplate, on_delete=models.CASCADE, related_name='instances')
+    
+    # Computed datetime fields for precise scheduling
+    start_datetime = models.DateTimeField(help_text="Full start date and time.")
+    end_datetime = models.DateTimeField(help_text="Full end date and time.")
+    
+    # Staffing status
+    is_fully_staffed = models.BooleanField(default=False, help_text="True when all slots are filled.")
+    
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    
+    # Notes for this specific shift instance
+    notes = models.TextField(blank=True, help_text="Special notes for this shift (e.g., training drill, standby event).")
+
+    def __str__(self):
+        return f"{self.shift_template.name} on {self.date}"
+    
+    class Meta:
+        ordering = ['date', 'start_datetime']
+        unique_together = ('date', 'shift_template')  # Prevent duplicate shifts for same template on same date
+
+
+# --- Model 5: ShiftSlot (Individual position on a shift) ---
+
+class ShiftSlot(models.Model):
+    """
+    Represents a single position slot on a Shift that can be filled by a member.
+    Created automatically when a Shift is generated from a ShiftTemplate.
+    """
+    shift = models.ForeignKey(Shift, on_delete=models.CASCADE, related_name='slots')
+    position = models.ForeignKey(Position, on_delete=models.CASCADE)
+    
+    # Assignment tracking
+    filled_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='shift_assignments')
+    is_filled = models.BooleanField(default=False)
+    
+    # Timestamps for tracking
+    filled_at = models.DateTimeField(null=True, blank=True, help_text="When this slot was claimed.")
+    
+    def __str__(self):
+        status = f"Filled by {self.filled_by.get_full_name()}" if self.filled_by else "Open"
+        return f"{self.shift} - {self.position.code} ({status})"
+    
+    def save(self, *args, **kwargs):
+        # Auto-set filled_at timestamp when slot is claimed
+        if self.filled_by and not self.filled_at:
+            self.filled_at = timezone.now()
+        super().save(*args, **kwargs)
+    
+    class Meta:
+        ordering = ['shift__date', 'position__code']
+
+
+# --- Model 6: ShiftChangeRequest (For trading/dropping shifts) ---
+
+class ShiftChangeRequest(models.Model):
+    """
+    Handles requests to trade or drop shifts after they've been claimed.
+    Requires officer approval.
+    """
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending Approval'),
+        ('APPROVED', 'Approved'),
+        ('DENIED', 'Denied'),
+        ('CANCELLED', 'Cancelled'),
+    ]
+    
+    REQUEST_TYPES = [
+        ('DROP', 'Drop Shift'),
+        ('TRADE', 'Trade Shift'),
+    ]
+    
+    shift_slot = models.ForeignKey(ShiftSlot, on_delete=models.CASCADE, related_name='change_requests')
+    requested_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='shift_change_requests')
+    request_type = models.CharField(max_length=10, choices=REQUEST_TYPES)
+    
+    # For trade requests
+    trade_with = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='incoming_trade_requests')
+    
+    # Approval tracking
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
+    reviewed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='reviewed_shift_changes')
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    
+    # Justification
+    reason = models.TextField(help_text="Reason for the change request.")
+    admin_notes = models.TextField(blank=True, help_text="Notes from the reviewing officer.")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.request_type} request by {self.requested_by.get_full_name()} - {self.status}"
+    
+    class Meta:
+        ordering = ['-created_at']
