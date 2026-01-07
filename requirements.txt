@@ -15,6 +15,9 @@ dj-database-url>=2.1.0
 
 # AUTHENTICATION & PERMISSIONS
 django-guardian>=2.4.0  # Object-level permissions
+argon2-cffi>=23.1.0  # Secure password hashing
+django-ratelimit>=4.1.0  # Rate limiting for brute-force protection
+python-magic>=0.4.27  # File type validation
 
 # REST API
 djangorestframework>=3.14.0
