@@ -1,89 +1,187 @@
 {% extends "base.html" %}
-{% load static %}
-{% load mathfilters %}
 
-{% block title %}Shift Calendar & Sign-up{% endblock %}
+{% block title %}Shift Calendar - Fire Department Intranet{% endblock %}
+
+{% block breadcrumb %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item active">Shift Calendar</li>
+    </ol>
+</nav>
+{% endblock %}
 
 {% block content %}
-    <h1>📅 Shift Calendar & Sign-up</h1>
-    <hr>
-    
-    <div class="alert alert-info" role="alert">
-        <strong>Your Next Step:</strong> Review open slots and click 'Sign Up' to claim a position. You can only sign up for positions you are qualified for.
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2><i class="bi bi-calendar-week"></i> Shift Calendar</h2>
+        <p class="text-muted">Sign up for available shifts over the next 90 days</p>
     </div>
-    
-    <div class="d-flex justify-content-between mb-3">
-        <h5>Shifts from {{ today|date:"M d, Y" }} to {{ shift_data|last|default_if_none:""|date:"M d, Y" }}</h5>
-        <a href="{% url 'scheduling:ical_export' %}" class="btn btn-sm btn-outline-dark">📥 Export My Shifts (.ics)</a>
+    <div class="col-md-4 text-md-end">
+        <a href="{% url 'scheduling:ical_export' %}" class="btn btn-outline-primary">
+            <i class="bi bi-calendar-plus"></i> Export to Calendar
+        </a>
     </div>
+</div>
 
-    {% for shift in shift_data %}
-        <div class="card mb-3 shadow-sm 
-            {% if shift.is_fully_staffed %}border-success{% elif shift.date < today|date:"Y-m-d" %}border-secondary{% else %}border-primary{% endif %}">
-            
-            <div class="card-header d-flex justify-content-between align-items-center 
-                {% if shift.is_fully_staffed %}bg-success text-white{% else %}bg-light{% endif %}">
-                
-                <h5 class="mb-0">
-                    {{ shift.date|date:"l, M d" }} | {{ shift.template_name }} 
-                    <small class="text-muted ms-2">({{ shift.start_time|time:"h:i A" }} start)</small>
-                </h5>
-                
-                {% if shift.is_fully_staffed %}
-                    <span class="badge bg-light text-success fs-6">FULLY STAFFED</span>
-                {% elif shift.date < today|date:"Y-m-d" %}
-                    <span class="badge bg-secondary fs-6">PAST</span>
-                {% else %}
-                    <span class="badge bg-danger fs-6">OPEN SLOTS</span>
-                {% endif %}
-            </div>
-
-            <div class="card-body">
-                <div class="row">
-                    {% for slot in shift.slots %}
-                        <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-                            <div class="card h-100 p-2 
-                                {% if slot.is_user_signed_up %}bg-primary text-white border-primary{% elif slot.is_filled %}bg-light border-secondary{% elif slot.is_qualified %}border-success{% else %}border-warning{% endif %}">
-                                
-                                <div class="card-title mb-1">
-                                    <span class="fw-bold fs-6">{{ slot.position }}</span>
-                                </div>
-                                
-                                {% if slot.is_user_signed_up %}
-                                    <p class="mb-1 small">You are filling this slot.</p>
-                                    <form method="post" action="{% url 'scheduling:shift_drop' slot.id %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-outline-light w-100" 
-                                            onclick="return confirm('Are you sure you want to drop the {{ slot.position }} shift on {{ shift.date|date:"M d" }}?');">
-                                            DROP SHIFT
-                                        </button>
-                                    </form>
-
-                                {% elif slot.is_filled %}
-                                    <p class="mb-1 small text-muted">Filled by: {{ slot.filled_by|default:"N/A" }}</p>
-                                    <span class="badge bg-secondary">FILLED</span>
-                                    
-                                {% elif slot.is_qualified %}
-                                    <p class="mb-1 small text-success">Open & Qualified!</p>
-                                    <form method="post" action="{% url 'scheduling:shift_signup' slot.id %}">
-                                        {% csrf_token %}
-                                        <button type="submit" class="btn btn-sm btn-success w-100">
-                                            SIGN UP
-                                        </button>
-                                    </form>
-                                    
-                                {% else %}
-                                    <p class="mb-1 small text-warning">Open (Not Qualified)</p>
-                                    <span class="badge bg-warning text-dark">LACKS CERT</span>
-                                {% endif %}
-                            </div>
-                        </div>
-                    {% endfor %}
+<!-- Filter Controls -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-secondary active" data-filter="all">
+                        All Shifts
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-filter="available">
+                        Available Only
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" data-filter="mine">
+                        My Shifts
+                    </button>
                 </div>
             </div>
+            <div class="col-md-6 text-md-end">
+                <span class="badge bg-success me-2">
+                    <i class="bi bi-circle-fill"></i> Available
+                </span>
+                <span class="badge bg-warning me-2">
+                    <i class="bi bi-circle-fill"></i> Partially Filled
+                </span>
+                <span class="badge bg-danger">
+                    <i class="bi bi-circle-fill"></i> Full
+                </span>
+            </div>
         </div>
-    {% empty %}
-        <div class="alert alert-warning">No upcoming shifts have been generated yet.</div>
-    {% endfor %}
+    </div>
+</div>
 
+<!-- Shifts -->
+{% for shift in shift_data %}
+<div class="card mb-3 shift-card" 
+     data-shift-id="{{ shift.id }}"
+     data-is-mine="{% if shift.is_user_signed_up %}true{% else %}false{% endif %}"
+     data-is-available="{% if not shift.is_fully_staffed %}true{% else %}false{% endif %}">
+    <div class="card-header {% if shift.is_fully_staffed %}bg-success text-white{% elif shift.slots|length > 0 %}bg-warning{% else %}bg-light{% endif %}">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-0">
+                    <i class="bi bi-calendar-date"></i>
+                    {{ shift.date|date:"l, F j, Y" }}
+                    <span class="badge bg-dark ms-2">{{ shift.template_name }}</span>
+                </h5>
+                <small>{{ shift.start_time|time:"g:i A" }}</small>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if shift.is_fully_staffed %}
+                    <span class="badge bg-light text-dark">
+                        <i class="bi bi-check-circle-fill"></i> Fully Staffed
+                    </span>
+                {% else %}
+                    <span class="badge bg-light text-dark">
+                        {{ shift.slots|length }} position{{ shift.slots|pluralize }} available
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for slot in shift.slots %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card h-100 {% if slot.is_user_signed_up %}border-primary{% elif slot.is_filled %}border-secondary{% else %}border-success{% endif %}">
+                    <div class="card-body">
+                        <h6 class="card-title">
+                            <span class="badge bg-dark">{{ slot.position }}</span>
+                        </h6>
+                        
+                        {% if slot.is_filled %}
+                            <p class="mb-2">
+                                <i class="bi bi-person-fill"></i>
+                                <strong>{{ slot.filled_by }}</strong>
+                            </p>
+                            
+                            {% if slot.is_user_signed_up %}
+                                <form method="post" action="{% url 'scheduling:shift_drop' slot.id %}" class="d-inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-outline-danger w-100" 
+                                            data-confirm="Are you sure you want to drop this shift?">
+                                        <i class="bi bi-x-circle"></i> Drop Shift
+                                    </button>
+                                </form>
+                            {% endif %}
+                        {% else %}
+                            <p class="mb-2 text-muted">
+                                <i class="bi bi-circle"></i> Available
+                            </p>
+                            
+                            {% if slot.is_qualified %}
+                                <form method="post" action="{% url 'scheduling:shift_signup' slot.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-sm btn-success w-100">
+                                        <i class="bi bi-check-circle"></i> Sign Up
+                                    </button>
+                                </form>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary w-100" disabled 
+                                        title="You don't have the required certification for this position">
+                                    <i class="bi bi-lock"></i> Not Qualified
+                                </button>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% empty %}
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    No shifts available in the next 90 days. Check back soon!
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter functionality
+    const filterButtons = document.querySelectorAll('[data-filter]');
+    const shiftCards = document.querySelectorAll('.shift-card');
+    
+    filterButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            // Update active button
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.getAttribute('data-filter');
+            
+            shiftCards.forEach(card => {
+                const isMine = card.getAttribute('data-is-mine') === 'true';
+                const isAvailable = card.getAttribute('data-is-available') === 'true';
+                
+                let show = false;
+                
+                if (filter === 'all') {
+                    show = true;
+                } else if (filter === 'available') {
+                    show = isAvailable;
+                } else if (filter === 'mine') {
+                    show = isMine;
+                }
+                
+                if (show) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
 {% endblock %}
