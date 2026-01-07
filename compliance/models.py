@@ -1,465 +1,394 @@
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
-from datetime import timedelta
 
 
-# --- Model 1: MedicalPhysical ---
+# --- Model 1: HistoricalShiftRecord ---
 
-class MedicalPhysical(models.Model):
+class HistoricalShiftRecord(models.Model):
     """
-    Tracks annual medical physicals and fitness-for-duty evaluations
+    Archives completed shifts for historical reference and reporting
     """
-    EXAM_TYPES = [
-        ('ANNUAL', 'Annual Physical'),
-        ('PRE_EMPLOYMENT', 'Pre-Employment Physical'),
-        ('RETURN_TO_DUTY', 'Return to Duty'),
-        ('FITNESS_FOR_DUTY', 'Fitness for Duty'),
-    ]
+    # Original shift info
+    shift_date = models.DateField(db_index=True)
+    shift_template_name = models.CharField(max_length=100, help_text="Name of the shift template used")
     
-    RESULT_CHOICES = [
-        ('CLEARED', 'Cleared for Full Duty'),
-        ('CLEARED_WITH_RESTRICTIONS', 'Cleared with Restrictions'),
-        ('NOT_CLEARED', 'Not Cleared'),
-        ('PENDING', 'Pending Results'),
-    ]
+    # Times
+    start_datetime = models.DateTimeField()
+    end_datetime = models.DateTimeField()
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='medical_physicals')
-    
-    # Exam details
-    exam_type = models.CharField(max_length=20, choices=EXAM_TYPES, default='ANNUAL')
-    exam_date = models.DateField(help_text="Date physical was conducted")
-    next_exam_due = models.DateField(help_text="When next physical is due")
-    
-    # Provider info
-    provider_name = models.CharField(max_length=200, blank=True)
-    provider_facility = models.CharField(max_length=200, blank=True)
-    
-    # Results
-    result = models.CharField(max_length=30, choices=RESULT_CHOICES, default='PENDING')
-    restrictions = models.TextField(
-        blank=True,
-        help_text="Any duty restrictions or limitations"
+    # Staffing snapshot (JSON for flexibility)
+    roster = models.JSONField(
+        default=dict,
+        help_text="JSON snapshot of who filled which positions"
     )
     
-    # Vital signs
-    height_inches = models.IntegerField(null=True, blank=True)
-    weight_pounds = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
-    blood_pressure = models.CharField(max_length=20, blank=True, help_text="e.g., 120/80")
-    heart_rate = models.IntegerField(null=True, blank=True, help_text="Beats per minute")
+    # Staffing metrics
+    total_positions = models.IntegerField(default=0)
+    filled_positions = models.IntegerField(default=0)
+    was_fully_staffed = models.BooleanField(default=False)
     
-    # Documentation
-    documentation = models.FileField(
-        upload_to='medical/physicals/',
-        null=True,
-        blank=True,
-        help_text="Upload physical exam report"
-    )
+    # Activity during shift
+    calls_responded = models.IntegerField(default=0, help_text="Number of calls responded to")
+    training_conducted = models.BooleanField(default=False)
     
     # Notes
-    notes = models.TextField(blank=True, help_text="Additional notes or findings")
+    shift_notes = models.TextField(blank=True, help_text="Notes about this shift")
+    significant_events = models.TextField(
+        blank=True,
+        help_text="Any significant events or incidents"
+    )
     
-    # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    modified_at = models.DateTimeField(auto_now=True)
-    created_by = models.ForeignKey(
+    # Officer in charge
+    officer_in_charge = models.CharField(max_length=200, blank=True)
+    
+    # Archived metadata
+    archived_at = models.DateTimeField(auto_now_add=True)
+    archived_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
-        related_name='physicals_recorded'
+        related_name='shifts_archived'
     )
     
-    def __str__(self):
-        return f"{self.user.get_full_name()} - {self.get_exam_type_display()} ({self.exam_date})"
-    
-    @property
-    def is_overdue(self):
-        """Check if next exam is overdue"""
-        return self.next_exam_due < timezone.now().date()
-    
-    @property
-    def days_until_due(self):
-        """Calculate days until next exam is due"""
-        delta = self.next_exam_due - timezone.now().date()
-        return delta.days
+    # Link to original shift (if still exists)
+    original_shift_id = models.IntegerField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-exam_date']
-        verbose_name_plural = 'Medical Physicals'
-
-
-# --- Model 2: FitTest ---
-
-class FitTest(models.Model):
-    """
-    Tracks respiratory fit testing for SCBA/respirator use
-    """
-    TEST_TYPES = [
-        ('QUALITATIVE', 'Qualitative (Taste/Smell Test)'),
-        ('QUANTITATIVE', 'Quantitative (PortaCount)'),
-    ]
-    
-    RESULT_CHOICES = [
-        ('PASS', 'Pass'),
-        ('FAIL', 'Fail'),
-    ]
-    
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='fit_tests')
-    
-    # Test details
-    test_date = models.DateField(default=timezone.now)
-    test_type = models.CharField(max_length=20, choices=TEST_TYPES)
-    result = models.CharField(max_length=10, choices=RESULT_CHOICES)
-    
-    # Equipment tested
-    mask_manufacturer = models.CharField(max_length=100, help_text="e.g., Scott, MSA, Honeywell")
-    mask_model = models.CharField(max_length=100, help_text="e.g., AV-3000, M7")
-    mask_size = models.CharField(max_length=20, help_text="e.g., Small, Medium, Large")
-    
-    # Quantitative results
-    fit_factor = models.IntegerField(
-        null=True,
-        blank=True,
-        help_text="Overall fit factor (quantitative tests only)"
-    )
-    
-    # Tester info
-    tester = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='fit_tests_conducted',
-        help_text="Who conducted the fit test"
-    )
-    
-    # Validity
-    expiration_date = models.DateField(help_text="Annual fit test required")
-    
-    # Documentation
-    test_report = models.FileField(
-        upload_to='medical/fit_tests/',
-        null=True,
-        blank=True,
-        help_text="Upload fit test report"
-    )
-    
-    notes = models.TextField(blank=True)
-    
-    created_at = models.DateTimeField(auto_now_add=True)
+        ordering = ['-shift_date']
+        indexes = [
+            models.Index(fields=['shift_date']),
+            models.Index(fields=['shift_template_name']),
+        ]
     
     def __str__(self):
-        return f"{self.user.get_full_name()} - Fit Test {self.test_date} ({self.result})"
-    
-    def save(self, *args, **kwargs):
-        # Auto-calculate expiration (1 year from test date)
-        if not self.expiration_date:
-            self.expiration_date = self.test_date + timedelta(days=365)
-        super().save(*args, **kwargs)
-    
-    @property
-    def is_expired(self):
-        """Check if fit test has expired"""
-        return self.expiration_date < timezone.now().date()
-    
-    class Meta:
-        ordering = ['-test_date']
+        return f"{self.shift_template_name} - {self.shift_date}"
 
 
-# --- Model 3: Immunization ---
+# --- Model 2: LegacyMemberData ---
 
-class Immunization(models.Model):
+class LegacyMemberData(models.Model):
     """
-    Tracks immunizations and vaccinations
+    Stores historical member records for retired/former members
     """
-    VACCINE_TYPES = [
-        ('HEPATITIS_A', 'Hepatitis A'),
-        ('HEPATITIS_B', 'Hepatitis B'),
-        ('TETANUS', 'Tetanus/Tdap'),
-        ('MMR', 'MMR (Measles, Mumps, Rubella)'),
-        ('VARICELLA', 'Varicella (Chickenpox)'),
-        ('INFLUENZA', 'Influenza (Annual Flu)'),
-        ('COVID19', 'COVID-19'),
+    # Basic info
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    badge_number = models.CharField(max_length=20, db_index=True)
+    
+    # Service dates
+    hire_date = models.DateField(null=True, blank=True)
+    separation_date = models.DateField(null=True, blank=True, help_text="Date member left department")
+    
+    # Separation details
+    SEPARATION_TYPES = [
+        ('RETIRED', 'Retired'),
+        ('RESIGNED', 'Resigned'),
+        ('TERMINATED', 'Terminated'),
+        ('DECEASED', 'Deceased'),
+        ('TRANSFERRED', 'Transferred to Another Agency'),
         ('OTHER', 'Other'),
     ]
+    separation_type = models.CharField(max_length=20, choices=SEPARATION_TYPES, blank=True)
+    separation_reason = models.TextField(blank=True)
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='immunizations')
+    # Service summary
+    years_of_service = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    highest_rank = models.CharField(max_length=100, blank=True)
     
-    # Vaccine details
-    vaccine_type = models.CharField(max_length=20, choices=VACCINE_TYPES)
-    vaccine_name = models.CharField(max_length=200, blank=True, help_text="Specific vaccine product name")
-    
-    # Administration
-    administration_date = models.DateField()
-    dose_number = models.IntegerField(default=1, help_text="Which dose in the series (e.g., 1 of 2)")
-    total_doses = models.IntegerField(default=1, help_text="Total doses in series")
-    
-    # Provider
-    administered_by = models.CharField(max_length=200, blank=True, help_text="Healthcare provider")
-    facility = models.CharField(max_length=200, blank=True)
-    lot_number = models.CharField(max_length=100, blank=True)
-    
-    # Expiration/next dose
-    expiration_date = models.DateField(null=True, blank=True, help_text="When this immunity expires")
-    next_dose_due = models.DateField(null=True, blank=True, help_text="When next dose/booster is due")
-    
-    # Documentation
-    documentation = models.FileField(
-        upload_to='medical/immunizations/',
-        null=True,
-        blank=True,
-        help_text="Upload vaccination record"
+    # Legacy data snapshot (JSON for flexibility)
+    certification_history = models.JSONField(
+        default=list,
+        help_text="Historical certifications held"
+    )
+    training_history = models.JSONField(
+        default=list,
+        help_text="Historical training records"
+    )
+    awards_commendations = models.JSONField(
+        default=list,
+        help_text="Awards and commendations received"
     )
     
-    notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    # Contact info (if staying in touch)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    mailing_address = models.TextField(blank=True)
     
-    def __str__(self):
-        return f"{self.user.get_full_name()} - {self.get_vaccine_type_display()} ({self.administration_date})"
+    # Notes
+    notes = models.TextField(blank=True, help_text="General notes about member's service")
     
-    @property
-    def is_series_complete(self):
-        """Check if vaccination series is complete"""
-        return self.dose_number >= self.total_doses
+    # Photo
+    photo = models.ImageField(upload_to='legacy_photos/', null=True, blank=True)
+    
+    # Archive metadata
+    archived_at = models.DateTimeField(auto_now_add=True)
+    archived_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='legacy_members_archived'
+    )
+    
+    # Link to original user account (if converted from active user)
+    original_user_id = models.IntegerField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-administration_date']
+        ordering = ['last_name', 'first_name']
+        indexes = [
+            models.Index(fields=['badge_number']),
+            models.Index(fields=['separation_date']),
+        ]
+        verbose_name_plural = 'Legacy Member Data'
+    
+    def __str__(self):
+        return f"{self.first_name} {self.last_name} (Badge #{self.badge_number})"
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
 
-# --- Model 4: OSHA_Log ---
+# --- Model 3: IncidentArchive ---
 
-class OSHALog(models.Model):
+class IncidentArchive(models.Model):
     """
-    OSHA 300 Log - Workplace injury and illness tracking
+    Archives incident reports and call data
     """
+    # Incident identification
+    incident_number = models.CharField(max_length=50, unique=True, db_index=True)
+    incident_date = models.DateField(db_index=True)
+    incident_time = models.TimeField()
+    
+    # Type
     INCIDENT_TYPES = [
-        ('INJURY', 'Injury'),
-        ('ILLNESS', 'Illness'),
-        ('EXPOSURE', 'Exposure Incident'),
+        ('FIRE', 'Fire'),
+        ('EMS', 'EMS/Medical'),
+        ('MVA', 'Motor Vehicle Accident'),
+        ('HAZMAT', 'Hazardous Materials'),
+        ('RESCUE', 'Technical Rescue'),
+        ('SERVICE', 'Service Call'),
+        ('FALSE_ALARM', 'False Alarm'),
+        ('MUTUAL_AID', 'Mutual Aid'),
+        ('TRAINING', 'Training'),
+        ('OTHER', 'Other'),
     ]
-    
-    SEVERITY_LEVELS = [
-        ('FIRST_AID', 'First Aid Only'),
-        ('MEDICAL_TREATMENT', 'Medical Treatment'),
-        ('RESTRICTED_WORK', 'Restricted Work Activity'),
-        ('LOST_TIME', 'Days Away from Work'),
-        ('FATALITY', 'Fatality'),
-    ]
-    
-    # Employee info
-    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='osha_incidents')
-    
-    # Incident details
-    incident_date = models.DateField(help_text="Date of injury/illness")
-    incident_time = models.TimeField(null=True, blank=True)
     incident_type = models.CharField(max_length=20, choices=INCIDENT_TYPES)
     
     # Location
-    location = models.CharField(max_length=200, help_text="Where did the incident occur?")
+    address = models.CharField(max_length=300)
+    city = models.CharField(max_length=100, blank=True)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    
+    # Response details
+    dispatch_time = models.DateTimeField(null=True, blank=True)
+    enroute_time = models.DateTimeField(null=True, blank=True)
+    onscene_time = models.DateTimeField(null=True, blank=True)
+    clear_time = models.DateTimeField(null=True, blank=True)
+    
+    # Units responded (JSON array)
+    units_responded = models.JSONField(
+        default=list,
+        help_text="List of units that responded"
+    )
+    
+    # Personnel (JSON array)
+    personnel = models.JSONField(
+        default=list,
+        help_text="List of personnel who responded"
+    )
+    
+    # Incident commander
+    incident_commander = models.CharField(max_length=200, blank=True)
     
     # Description
-    description = models.TextField(help_text="Describe what happened")
-    body_part = models.CharField(max_length=100, blank=True, help_text="Affected body part")
-    injury_nature = models.CharField(
-        max_length=200,
-        blank=True,
-        help_text="Nature of injury (cut, burn, fracture, etc.)"
-    )
+    description = models.TextField(help_text="Incident description/narrative")
     
-    # Classification
-    severity = models.CharField(max_length=20, choices=SEVERITY_LEVELS)
-    is_recordable = models.BooleanField(
-        default=True,
-        help_text="Is this recordable under OSHA 300 requirements?"
-    )
+    # Actions taken
+    actions_taken = models.TextField(blank=True)
     
-    # Work status
-    days_away_from_work = models.IntegerField(default=0)
-    days_on_restricted_duty = models.IntegerField(default=0)
-    return_to_work_date = models.DateField(null=True, blank=True)
-    
-    # Medical treatment
-    treatment_facility = models.CharField(max_length=200, blank=True)
-    treating_physician = models.CharField(max_length=200, blank=True)
-    
-    # Privacy case
-    is_privacy_case = models.BooleanField(
-        default=False,
-        help_text="Check if case involves privacy concerns (HIV, mental health, etc.)"
-    )
-    
-    # Root cause
-    contributing_factors = models.TextField(
-        blank=True,
-        help_text="What factors contributed to this incident?"
-    )
-    corrective_actions = models.TextField(
-        blank=True,
-        help_text="What actions were taken to prevent recurrence?"
-    )
+    # Outcomes
+    patient_transported = models.BooleanField(default=False)
+    transport_destination = models.CharField(max_length=200, blank=True)
+    property_damage = models.BooleanField(default=False)
+    injuries = models.BooleanField(default=False)
+    fatalities = models.BooleanField(default=False)
     
     # Documentation
     incident_report = models.FileField(
-        upload_to='compliance/osha_logs/',
-        null=True,
-        blank=True,
-        help_text="Upload incident report"
-    )
-    
-    # Metadata
-    reported_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name='osha_incidents_reported'
-    )
-    reported_date = models.DateTimeField(auto_now_add=True)
-    
-    # Case number (OSHA 300 Log)
-    case_number = models.CharField(max_length=20, unique=True, blank=True)
-    
-    def __str__(self):
-        return f"OSHA {self.case_number} - {self.employee.get_full_name()} ({self.incident_date})"
-    
-    def save(self, *args, **kwargs):
-        # Auto-generate case number if not set
-        if not self.case_number:
-            year = self.incident_date.year
-            count = OSHALog.objects.filter(incident_date__year=year).count() + 1
-            self.case_number = f"{year}-{count:04d}"
-        super().save(*args, **kwargs)
-    
-    class Meta:
-        ordering = ['-incident_date']
-        verbose_name = 'OSHA Log Entry'
-        verbose_name_plural = 'OSHA Log Entries'
-
-
-# --- Model 5: ExposureIncident ---
-
-class ExposureIncident(models.Model):
-    """
-    Tracks exposure incidents requiring medical follow-up
-    (bloodborne pathogens, hazmat, etc.)
-    """
-    EXPOSURE_TYPES = [
-        ('BLOODBORNE', 'Bloodborne Pathogen'),
-        ('HAZMAT', 'Hazardous Material'),
-        ('SMOKE', 'Smoke/Toxic Inhalation'),
-        ('RADIATION', 'Radiation'),
-        ('BIOLOGICAL', 'Biological Agent'),
-        ('OTHER', 'Other'),
-    ]
-    
-    ROUTE_OF_EXPOSURE = [
-        ('PERCUTANEOUS', 'Percutaneous (Needle/Sharp)'),
-        ('MUCOUS_MEMBRANE', 'Mucous Membrane (Eye/Mouth)'),
-        ('INHALATION', 'Inhalation'),
-        ('SKIN_CONTACT', 'Skin Contact'),
-        ('INGESTION', 'Ingestion'),
-    ]
-    
-    employee = models.ForeignKey(User, on_delete=models.CASCADE, related_name='exposure_incidents')
-    
-    # Incident details
-    exposure_date = models.DateField()
-    exposure_time = models.TimeField(null=True, blank=True)
-    exposure_type = models.CharField(max_length=20, choices=EXPOSURE_TYPES)
-    route_of_exposure = models.CharField(max_length=20, choices=ROUTE_OF_EXPOSURE)
-    
-    # Source
-    source_description = models.TextField(help_text="Describe the source of exposure")
-    incident_location = models.CharField(max_length=200)
-    
-    # Immediate response
-    decontamination_performed = models.BooleanField(default=False)
-    decontamination_details = models.TextField(blank=True)
-    ppe_worn = models.TextField(blank=True, help_text="What PPE was being worn?")
-    
-    # Medical follow-up
-    immediate_medical_care = models.BooleanField(default=False)
-    medical_facility = models.CharField(max_length=200, blank=True)
-    treating_physician = models.CharField(max_length=200, blank=True)
-    
-    # Testing/prophylaxis
-    baseline_testing_done = models.BooleanField(default=False)
-    baseline_testing_date = models.DateField(null=True, blank=True)
-    prophylaxis_offered = models.BooleanField(default=False)
-    prophylaxis_accepted = models.BooleanField(default=False)
-    
-    # Follow-up schedule
-    follow_up_required = models.BooleanField(default=True)
-    next_follow_up_date = models.DateField(null=True, blank=True)
-    follow_up_complete = models.BooleanField(default=False)
-    
-    # Documentation
-    incident_report = models.FileField(
-        upload_to='compliance/exposures/',
+        upload_to='archives/incidents/',
         null=True,
         blank=True
     )
     
-    # Linked OSHA log
-    osha_log = models.OneToOneField(
-        OSHALog,
+    # Archive metadata
+    archived_at = models.DateTimeField(auto_now_add=True)
+    archived_by = models.ForeignKey(
+        User,
         on_delete=models.SET_NULL,
         null=True,
-        blank=True,
-        related_name='exposure_detail'
+        related_name='incidents_archived'
     )
     
-    notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    class Meta:
+        ordering = ['-incident_date', '-incident_time']
+        indexes = [
+            models.Index(fields=['incident_date']),
+            models.Index(fields=['incident_type']),
+            models.Index(fields=['incident_number']),
+        ]
     
     def __str__(self):
-        return f"{self.employee.get_full_name()} - {self.get_exposure_type_display()} ({self.exposure_date})"
-    
-    class Meta:
-        ordering = ['-exposure_date']
+        return f"{self.incident_number} - {self.incident_date} ({self.get_incident_type_display()})"
 
 
-# --- Model 6: ComplianceAlert ---
+# --- Model 4: AnnualReport ---
 
-class ComplianceAlert(models.Model):
+class AnnualReport(models.Model):
     """
-    Tracks alerts sent to members about expiring compliance items
+    Stores annual department summary reports
     """
-    ALERT_TYPES = [
-        ('PHYSICAL', 'Medical Physical Due'),
-        ('FIT_TEST', 'Fit Test Expiring'),
-        ('IMMUNIZATION', 'Immunization Due'),
-        ('CERTIFICATION', 'Certification Expiring'),
-        ('TRAINING', 'Training Required'),
-    ]
+    year = models.IntegerField(unique=True, db_index=True)
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='compliance_alerts')
-    alert_type = models.CharField(max_length=20, choices=ALERT_TYPES)
+    # Response statistics
+    total_calls = models.IntegerField(default=0)
+    fire_calls = models.IntegerField(default=0)
+    ems_calls = models.IntegerField(default=0)
+    mva_calls = models.IntegerField(default=0)
+    service_calls = models.IntegerField(default=0)
+    false_alarms = models.IntegerField(default=0)
+    mutual_aid_given = models.IntegerField(default=0)
+    mutual_aid_received = models.IntegerField(default=0)
     
-    # Alert content
-    subject = models.CharField(max_length=200)
-    message = models.TextField()
+    # Response times (minutes, averages)
+    avg_response_time = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    avg_turnout_time = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     
-    # Related item
-    related_object_id = models.IntegerField(
+    # Personnel statistics
+    total_members = models.IntegerField(default=0)
+    active_firefighters = models.IntegerField(default=0)
+    probationary_members = models.IntegerField(default=0)
+    officers = models.IntegerField(default=0)
+    new_members = models.IntegerField(default=0, help_text="New members hired this year")
+    separated_members = models.IntegerField(default=0, help_text="Members who left this year")
+    
+    # Training statistics
+    total_training_hours = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    training_sessions_held = models.IntegerField(default=0)
+    certifications_earned = models.IntegerField(default=0)
+    
+    # Equipment/apparatus statistics
+    apparatus_count = models.IntegerField(default=0)
+    apparatus_hours = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Financial (if tracked)
+    budget = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    fundraising_revenue = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    
+    # Narrative sections
+    chief_message = models.TextField(blank=True, help_text="Message from the Chief")
+    highlights = models.TextField(blank=True, help_text="Major highlights and achievements")
+    challenges = models.TextField(blank=True, help_text="Challenges faced")
+    goals_next_year = models.TextField(blank=True, help_text="Goals for next year")
+    
+    # Report document
+    report_document = models.FileField(
+        upload_to='archives/annual_reports/',
         null=True,
         blank=True,
-        help_text="ID of the related compliance item"
+        help_text="Upload final formatted report (PDF)"
     )
     
-    # Delivery
-    sent_at = models.DateTimeField(auto_now_add=True)
-    sent_via_email = models.BooleanField(default=True)
-    email_delivered = models.BooleanField(default=False)
-    
-    # Acknowledgment
-    acknowledged = models.BooleanField(default=False)
-    acknowledged_at = models.DateTimeField(null=True, blank=True)
-    
-    # Escalation
-    is_escalated = models.BooleanField(default=False, help_text="Alert escalated to supervisor")
-    escalation_date = models.DateTimeField(null=True, blank=True)
-    
-    def __str__(self):
-        return f"{self.user.get_full_name()} - {self.get_alert_type_display()}"
+    # Metadata
+    created_at = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='annual_reports_created'
+    )
+    finalized = models.BooleanField(default=False)
+    finalized_date = models.DateField(null=True, blank=True)
     
     class Meta:
-        ordering = ['-sent_at']
+        ordering = ['-year']
+    
+    def __str__(self):
+        return f"Annual Report {self.year}"
+
+
+# --- Model 5: EquipmentHistory ---
+
+class EquipmentHistory(models.Model):
+    """
+    Tracks historical equipment/apparatus lifecycle
+    """
+    # Equipment identification
+    equipment_name = models.CharField(max_length=200)
+    equipment_type = models.CharField(max_length=100, help_text="Engine, Ladder, Rescue, etc.")
+    unit_number = models.CharField(max_length=50, blank=True)
+    
+    # Acquisition
+    acquisition_date = models.DateField(null=True, blank=True)
+    acquisition_cost = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    manufacturer = models.CharField(max_length=200, blank=True)
+    model = models.CharField(max_length=200, blank=True)
+    year = models.IntegerField(null=True, blank=True, help_text="Model year")
+    vin_serial = models.CharField(max_length=100, blank=True)
+    
+    # Service history
+    in_service_date = models.DateField(null=True, blank=True)
+    out_of_service_date = models.DateField(null=True, blank=True)
+    years_in_service = models.DecimalField(max_digits=5, decimal_places=1, null=True, blank=True)
+    
+    # Disposition
+    DISPOSITION_TYPES = [
+        ('IN_SERVICE', 'Currently In Service'),
+        ('RESERVE', 'Placed in Reserve'),
+        ('SOLD', 'Sold'),
+        ('SCRAPPED', 'Scrapped'),
+        ('TRADED', 'Traded In'),
+        ('DONATED', 'Donated'),
+        ('DESTROYED', 'Destroyed'),
+    ]
+    disposition = models.CharField(max_length=20, choices=DISPOSITION_TYPES, default='IN_SERVICE')
+    disposition_date = models.DateField(null=True, blank=True)
+    disposition_notes = models.TextField(blank=True)
+    
+    # Service statistics
+    total_miles = models.IntegerField(null=True, blank=True)
+    total_engine_hours = models.DecimalField(max_digits=10, decimal_places=1, null=True, blank=True)
+    total_calls_responded = models.IntegerField(null=True, blank=True)
+    
+    # Notable events
+    significant_events = models.TextField(
+        blank=True,
+        help_text="Major repairs, accidents, notable incidents"
+    )
+    
+    # Photos
+    photo = models.ImageField(upload_to='archives/equipment/', null=True, blank=True)
+    
+    # Documentation
+    documentation = models.FileField(
+        upload_to='archives/equipment_docs/',
+        null=True,
+        blank=True
+    )
+    
+    # Metadata
+    archived_at = models.DateTimeField(auto_now_add=True)
+    archived_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='equipment_archived'
+    )
+    
+    class Meta:
+        ordering = ['-in_service_date']
+        verbose_name_plural = 'Equipment History'
+    
+    def __str__(self):
+        return f"{self.equipment_name} ({self.equipment_type})"
