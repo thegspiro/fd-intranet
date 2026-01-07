@@ -260,9 +260,18 @@ class GeoSecurityService:
                 request
             )
         """
+        from core.system_config import SystemConfiguration
+        
         # Skip check for localhost/private IPs during development
         if cls._is_private_ip(ip_address):
             return True, "Private/local IP address", None
+        
+        # Get system configuration
+        config = SystemConfiguration.get_config()
+        
+        # Check if geo security is enabled
+        if not config.geo_security_enabled:
+            return True, "Geographic security disabled", None
         
         # Get geolocation info
         geo = cls.get_ip_geolocation(ip_address)
@@ -276,9 +285,10 @@ class GeoSecurityService:
             )
             return False, "Unable to verify your location. Access denied.", None
         
-        # Check if US IP
-        if geo.is_us:
-            return True, "US IP address", geo
+        # Check if IP is from allowed country
+        if config.is_country_allowed(geo.country_code):
+            country_name = geo.country_name
+            return True, f"Allowed country: {country_name}", geo
         
         # Check for active international access exception
         has_exception = cls._check_international_exception(user, geo)
