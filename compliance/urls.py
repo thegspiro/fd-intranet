@@ -1,47 +1,29 @@
+"""
+Compliance Module URL Configuration
+"""
 from django.urls import path
 from . import views
 
-# Set the application namespace
 app_name = 'compliance'
 
 urlpatterns = [
-    # --- 1. DASHBOARD & CHECKS ---
-
-    # Main Compliance Officer Dashboard
-    path('', views.ComplianceDashboardView.as_view(), name='compliance_dashboard'),
-
-    # Administrative endpoint to manually run the full compliance audit
-    path('run-check/', views.RunSafetyCheckView.as_view(), name='run_safety_check'),
-
-
-    # --- 2. SAFETY STANDARDS MANAGEMENT ---
-
-    # List of all defined Safety Standards
-    path('standards/', views.SafetyStandardListView.as_view(), name='safety_standard_list'),
+    # Member-facing views
+    path('', views.MemberComplianceDashboard.as_view(), name='dashboard'),
     
-    # Create a new Safety Standard
-    path('standards/create/', views.SafetyStandardCreateUpdateView.as_view(), name='safety_standard_create'),
+    # Compliance Officer views
+    path('officer/', views.ComplianceOfficerDashboard.as_view(), name='officer_dashboard'),
+    path('officer/member/<int:pk>/', views.MemberComplianceDetail.as_view(), name='member_detail'),
+    path('officer/add-physical/', views.AddMedicalPhysical.as_view(), name='add_physical'),
+    path('officer/add-fit-test/', views.AddFitTest.as_view(), name='add_fit_test'),
+    path('officer/add-immunization/', views.AddImmunization.as_view(), name='add_immunization'),
     
-    # Edit an existing Safety Standard
-    path('standards/edit/<int:pk>/', views.SafetyStandardCreateUpdateView.as_view(), name='safety_standard_edit'),
-
-
-    # --- 3. MEMBER RECORDS MANAGEMENT ---
-
-    # Create a new compliance record for a specific member/standard
-    path('records/create/', views.MemberRecordCreateView.as_view(), name='member_record_create'),
+    # OSHA logs
+    path('osha/', views.OSHALogList.as_view(), name='osha_logs'),
+    path('osha/add/', views.AddOSHALog.as_view(), name='add_osha_log'),
     
-    # Note: We can add an edit/list view for records later, but the create view is the core function.
-
-
-    # --- 4. SAFETY NET CONFIGURATION ---
-
-    # List of all defined Safety Net configurations
-    path('safety-nets/', views.SafetyNetListView.as_view(), name='safety_net_list'),
+    # Exposure incidents
+    path('exposure/add/', views.AddExposureIncident.as_view(), name='add_exposure'),
     
-    # Create a new Safety Net Configuration
-    path('safety-nets/create/', views.SafetyNetCreateUpdateView.as_view(), name='safety_net_create'),
-    
-    # Edit an existing Safety Net Configuration
-    path('safety-nets/edit/<int:pk>/', views.SafetyNetCreateUpdateView.as_view(), name='safety_net_edit'),
+    # Reports
+    path('reports/', views.ComplianceReports.as_view(), name='reports'),
 ]
