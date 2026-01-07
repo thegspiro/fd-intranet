@@ -6,13 +6,230 @@ from django.utils.html import format_html
 from django.utils import timezone
 from django.urls import reverse
 from django.contrib import messages
+from django.db import transaction
 from core.geo_security import (
     IPGeolocation, 
     InternationalAccessException, 
     SuspiciousAccessAttempt
 )
+from core.system_config import SystemConfiguration, CountryChangeLog
 from core.audit import AuditLog, LoginAttempt
 from core.notifications import NotificationManager, NotificationType, NotificationPriority
+
+
+@admin.register(SystemConfiguration)
+class SystemConfigurationAdmin(admin.ModelAdmin):
+    """
+    Admin interface for system configuration
+    CRITICAL: Changes here affect security for entire system
+    """
+    list_display = [
+        'department_name', 
+        'primary_country_display', 
+        'secondary_country_display',
+        'geo_security_status',
+        'modified_at'
+    ]
+    
+    fieldsets = (
+        ('Department Information', {
+            'fields': ('department_name', 'department_abbreviation', 'timezone')
+        }),
+        ('Geographic Security Settings', {
+            'fields': (
+                'geo_security_enabled',
+                'primary_country',
+                'secondary_country',
+            ),
+            'description': (
+                '<div style="background: #fff3cd; padding: 15px; border: 2px solid #ffc107; border-radius: 5px;">'
+                '<strong>⚠️ CRITICAL SECURITY SETTINGS</strong><br>'
+                'Changes to these settings affect ALL users immediately.<br>'
+                'Leadership team will be notified of any changes.<br><br>'
+                '<strong>Primary Country:</strong> Users from this country can access automatically.<br>'
+                '<strong>Secondary Country:</strong> Optional. Useful for border departments.<br>'
+                '<strong>Example:</strong> Department on US-Canada border sets Primary=US, Secondary=CA'
+                '</div>'
+            )
+        }),
+        ('Change History - Primary Country', {
+            'fields': (
+                'previous_primary_country',
+                'primary_country_changed_at',
+                'primary_country_changed_by'
+            ),
+            'classes': ('collapse',),
+            'description': 'Read-only tracking of primary country changes'
+        }),
+        ('Change History - Secondary Country', {
+            'fields': (
+                'previous_secondary_country',
+                'secondary_country_changed_at',
+                'secondary_country_changed_by'
+            ),
+            'classes': ('collapse',),
+            'description': 'Read-only tracking of secondary country changes'
+        }),
+        ('Contact Information', {
+            'fields': ('admin_email', 'it_email', 'security_email'),
+            'classes': ('collapse',)
+        }),
+        ('Setup Information', {
+            'fields': ('setup_completed', 'setup_completed_at', 'setup_completed_by'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    readonly_fields = [
+        'previous_primary_country', 'primary_country_changed_at', 'primary_country_changed_by',
+        'previous_secondary_country', 'secondary_country_changed_at', 'secondary_country_changed_by',
+        'setup_completed_at', 'setup_completed_by'
+    ]
+    
+    def has_add_permission(self, request):
+        # Only one configuration record allowed
+        return not SystemConfiguration.objects.exists()
+    
+    def has_delete_permission(self, request, obj=None):
+        # Cannot delete system configuration
+        return False
+    
+    def primary_country_display(self, obj):
+        """Display primary country with flag"""
+        country_name = dict(obj.COUNTRY_CHOICES).get(obj.primary_country, obj.primary_country)
+        return format_html(
+            '<strong style="color: green;">🟢 {}</strong>',
+            country_name
+        )
+    primary_country_display.short_description = 'Primary Country'
+    
+    def secondary_country_display(self, obj):
+        """Display secondary country with flag"""
+        if obj.secondary_country:
+            country_name = dict(obj.COUNTRY_CHOICES).get(obj.secondary_country, obj.secondary_country)
+            return format_html(
+                '<span style="color: blue;">🔵 {}</span>',
+                country_name
+            )
+        return format_html('<span style="color: gray;">Not configured</span>')
+    secondary_country_display.short_description = 'Secondary Country'
+    
+    def geo_security_status(self, obj):
+        """Display geo security status"""
+        if obj.geo_security_enabled:
+            return format_html('<span style="color: green; font-weight: bold;">✅ ENABLED</span>')
+        return format_html('<span style="color: red; font-weight: bold;">❌ DISABLED</span>')
+    geo_security_status.short_description = 'Geo Security'
+    
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        """Track country changes and set changed_by user"""
+        if change:
+            old_obj = SystemConfiguration.objects.get(pk=obj.pk)
+            
+            # Track primary country change
+            if old_obj.primary_country != obj.primary_country:
+                obj.primary_country_changed_by = request.user
+                
+                # Log to CountryChangeLog
+                CountryChangeLog.log_change(
+                    'PRIMARY',
+                    old_obj.primary_country,
+                    obj.primary_country,
+                    request.user,
+                    request,
+                    reason=request.POST.get('change_reason', 'Changed via admin panel')
+                )
+            
+            # Track secondary country change
+            if old_obj.secondary_country != obj.secondary_country:
+                obj.secondary_country_changed_by = request.user
+                
+                # Log to CountryChangeLog
+                CountryChangeLog.log_change(
+                    'SECONDARY',
+                    old_obj.secondary_country or '',
+                    obj.secondary_country or '',
+                    request.user,
+                    request,
+                    reason=request.POST.get('change_reason', 'Changed via admin panel')
+                )
+        
+        super().save_model(request, obj, form, change)
+        
+        # Show success message with security warning
+        if change:
+            messages.warning(
+                request,
+                format_html(
+                    '<strong>⚠️ SECURITY CONFIGURATION UPDATED</strong><br>'
+                    'Leadership team has been notified via email.<br>'
+                    'Changes are effective immediately for all users.'
+                )
+            )
+
+
+@admin.register(CountryChangeLog)
+class CountryChangeLogAdmin(admin.ModelAdmin):
+    """
+    Immutable audit log of country configuration changes
+    """
+    list_display = [
+        'timestamp', 
+        'change_type', 
+        'old_value_display',
+        'new_value_display',
+        'changed_by',
+        'leadership_notified'
+    ]
+    list_filter = ['change_type', 'leadership_notified', 'timestamp']
+    search_fields = ['changed_by__username', 'change_reason']
+    readonly_fields = [
+        'timestamp', 'changed_by', 'change_type', 'old_value', 'new_value',
+        'ip_address', 'user_agent', 'leadership_notified', 'leadership_notified_at',
+        'notification_recipient_count', 'change_reason'
+    ]
+    
+    fieldsets = (
+        ('Change Details', {
+            'fields': ('timestamp', 'changed_by', 'change_type', 'old_value', 'new_value')
+        }),
+        ('Justification', {
+            'fields': ('change_reason',)
+        }),
+        ('Technical Details', {
+            'fields': ('ip_address', 'user_agent'),
+            'classes': ('collapse',)
+        }),
+        ('Notification Status', {
+            'fields': ('leadership_notified', 'leadership_notified_at', 'notification_recipient_count'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def has_add_permission(self, request):
+        # Logs are created automatically
+        return False
+    
+    def has_delete_permission(self, request, obj=None):
+        # NEVER delete audit logs
+        return False
+    
+    def old_value_display(self, obj):
+        """Display old value with country name"""
+        if obj.change_type in ['PRIMARY', 'SECONDARY']:
+            country_name = dict(SystemConfiguration.COUNTRY_CHOICES).get(obj.old_value, obj.old_value)
+            return country_name if country_name else 'None'
+        return obj.old_value
+    old_value_display.short_description = 'Previous Value'
+    
+    def new_value_display(self, obj):
+        """Display new value with country name"""
+        if obj.change_type in ['PRIMARY', 'SECONDARY']:
+            country_name = dict(SystemConfiguration.COUNTRY_CHOICES).get(obj.new_value, obj.new_value)
+            return country_name if country_name else 'None'
+        return obj.new_value
+    new_value_display.short_description = 'New Value'
 
 
 @admin.register(IPGeolocation)
