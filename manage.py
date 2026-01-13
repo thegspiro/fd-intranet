@@ -3,15 +3,16 @@
 import os
 import sys
 
+
 def main():
     """Run administrative tasks."""
     
-    # CRITICAL FIX for ModuleNotFoundError: No module named 'fd_intranet'
-    # This line explicitly adds the inner project directory to the Python path.
-    # It ensures the 'fd_intranet' module containing settings.py can be found.
-    # 
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'fd_intranet'))
-
+    # CRITICAL FIX: Add the current directory to Python path
+    # This ensures Python can find the 'fd_intranet' module
+    import pathlib
+    project_root = pathlib.Path(__file__).resolve().parent
+    sys.path.insert(0, str(project_root))
+    
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fd_intranet.settings')
     try:
         from django.core.management import execute_from_command_line
