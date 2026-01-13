@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.views.generic import TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django import forms
+from django.utils import timezone  # <-- ADDED MISSING IMPORT
 from core.system_config import SystemConfiguration
 from django.db import transaction
 
@@ -183,7 +184,6 @@ class SystemStatusView(LoginRequiredMixin, TemplateView):
         # Get geo security statistics
         from core.geo_security import IPGeolocation, SuspiciousAccessAttempt
         from datetime import timedelta
-        from django.utils import timezone
         
         last_30_days = timezone.now() - timedelta(days=30)
         
