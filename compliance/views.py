@@ -10,6 +10,7 @@ from django.urls import reverse_lazy
 from django.db.models import Q, Count
 from django.utils import timezone
 from datetime import timedelta
+from django import forms  # <-- ADDED MISSING IMPORT
 from .models import MedicalPhysical, FitTest, Immunization, OSHALog, ExposureIncident
 from .alerts import ComplianceAlertService
 from .hipaa_models import HIPAATraining, BusinessAssociate, SecurityBreach
