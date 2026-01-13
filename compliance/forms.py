@@ -68,4 +68,10 @@ class SafetyNetConfigurationForm(forms.ModelForm):
         self.fields['position'].queryset = Position.objects.all().order_by('code')
         
         # Add a custom attribute to the type field for JavaScript targeting
-        self.fields['type'].widget.attrs.update({'id': 'id
+        self.fields['type'].widget.attrs.update({'id': 'id_safety_net_type', 'class': 'form-control'})
+        
+        # Add Bootstrap styling
+        for field_name, field in self.fields.items():
+            if field_name != 'is_active':
+                if 'class' not in field.widget.attrs:
+                    field.widget.attrs['class'] = 'form-control'
