@@ -3,7 +3,6 @@
 import os
 import sys
 
-
 def main():
     """Run administrative tasks."""
     
@@ -11,7 +10,7 @@ def main():
     # This ensures Python can find the 'fd_intranet' module
     import pathlib
     project_root = pathlib.Path(__file__).resolve().parent
-    sys.path.insert(0, str(project_root))
+    sys.path.insert(0, str(project_root))  # <-- CHANGED THIS LINE
     
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fd_intranet.settings')
     try:
@@ -23,7 +22,6 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
     execute_from_command_line(sys.argv)
-
 
 if __name__ == '__main__':
     main()
