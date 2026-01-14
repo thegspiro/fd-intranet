@@ -1,0 +1,141 @@
+"""
+The Logbook - Backend Entry Point (FastAPI)
+
+This is the main entry point for the backend API server.
+It initializes the FastAPI application, sets up middleware,
+connects to the database, and configures routes.
+"""
+
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
+from loguru import logger
+import sys
+
+from app.core.config import settings
+from app.core.database import database_manager
+from app.core.cache import cache_manager
+from app.api.v1.api import api_router
+
+
+# Configure logging
+logger.remove()
+logger.add(
+    sys.stdout,
+    format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - <level>{message}</level>",
+    level="INFO" if settings.ENVIRONMENT == "production" else "DEBUG",
+)
+logger.add(
+    "logs/app.log",
+    rotation="500 MB",
+    retention="10 days",
+    level="INFO",
+)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Lifespan context manager for startup and shutdown events
+    """
+    # Startup
+    logger.info("🚀 Starting The Logbook Backend...")
+    logger.info(f"Environment: {settings.ENVIRONMENT}")
+    logger.info(f"Version: {settings.VERSION}")
+    
+    # Connect to database
+    logger.info("Connecting to database...")
+    await database_manager.connect()
+    logger.info("✓ Database connected")
+    
+    # Connect to Redis
+    logger.info("Connecting to Redis...")
+    await cache_manager.connect()
+    logger.info("✓ Redis connected")
+    
+    logger.info(f"✓ Server started on port {settings.PORT}")
+    logger.info(f"📚 API Documentation: http://localhost:{settings.PORT}/docs")
+    logger.info(f"🔒 Health Check: http://localhost:{settings.PORT}/health")
+    
+    yield
+    
+    # Shutdown
+    logger.info("Shutting down gracefully...")
+    await database_manager.disconnect()
+    await cache_manager.disconnect()
+    logger.info("✓ Shutdown complete")
+
+
+# Create FastAPI application
+app = FastAPI(
+    title=settings.APP_NAME,
+    description="A highly flexible, secure, and modular intranet platform",
+    version=settings.VERSION,
+    docs_url="/docs" if settings.ENABLE_DOCS else None,
+    redoc_url="/redoc" if settings.ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if settings.ENABLE_DOCS else None,
+    lifespan=lifespan,
+)
+
+# ============================================
+# Middleware
+# ============================================
+
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Compression
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Custom middleware for request logging, security headers, etc.
+# from app.core.middleware import RequestLoggingMiddleware, SecurityHeadersMiddleware
+# app.add_middleware(RequestLoggingMiddleware)
+# app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ============================================
+# Routes
+# ============================================
+
+# Include API v1 router
+app.include_router(api_router, prefix="/api/v1")
+
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {
+        "status": "healthy",
+        "version": settings.VERSION,
+        "environment": settings.ENVIRONMENT,
+    }
+
+
+@app.get("/")
+async def root():
+    """Root endpoint"""
+    return {
+        "message": "The Logbook API",
+        "version": settings.VERSION,
+        "docs": f"/docs" if settings.ENABLE_DOCS else "Documentation disabled",
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=settings.PORT,
+        reload=settings.ENVIRONMENT == "development",
+        log_level="info",
+    )

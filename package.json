@@ -1,0 +1,91 @@
+{
+  "name": "the-logbook",
+  "version": "1.0.0",
+  "description": "Open-source modular intranet platform for fire departments and emergency services",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "mobile"
+  ],
+  "scripts": {
+    "setup": "npm install && npm run setup:backend && npm run setup:frontend",
+    "setup:backend": "cd backend && pip install -r requirements.txt",
+    "setup:frontend": "cd frontend && npm install",
+    
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && uvicorn app.main:app --reload --host 0.0.0.0 --port 3001",
+    "dev:frontend": "cd frontend && npm run dev",
+    
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "echo 'Python backend does not require build step'",
+    "build:frontend": "cd frontend && npm run build",
+    
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && pytest",
+    "test:frontend": "cd frontend && npm test",
+    
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && flake8 app/ && black --check app/",
+    "lint:frontend": "cd frontend && npm run lint",
+    
+    "format": "npm run format:backend && npm run format:frontend",
+    "format:backend": "cd backend && black app/ && isort app/",
+    "format:frontend": "cd frontend && prettier --write \"src/**/*.{ts,tsx,css}\"",
+    
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    
+    "db:migrate": "cd backend && alembic upgrade head",
+    "db:rollback": "cd backend && alembic downgrade -1",
+    "db:seed": "cd backend && python scripts/seed_data.py",
+    "db:reset": "npm run db:rollback && npm run db:migrate && npm run db:seed",
+    
+    "clean": "rm -rf node_modules frontend/node_modules frontend/dist backend/__pycache__ backend/**/__pycache__ backend/.pytest_cache"
+  },
+  "keywords": [
+    "intranet",
+    "fire-department",
+    "emergency-services",
+    "hipaa",
+    "compliance",
+    "training",
+    "scheduling"
+  ],
+  "author": "Intranet Platform Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thegspiro/the-logbook.git"
+  },
+  "bugs": {
+    "url": "https://github.com/thegspiro/the-logbook/issues"
+  },
+  "homepage": "https://github.com/thegspiro/the-logbook#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.1.1",
+    "husky": "^8.0.3",
+    "lint-staged": "^15.2.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
+    ]
+  }
+}
