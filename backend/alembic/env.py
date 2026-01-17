@@ -21,6 +21,7 @@ from app.core.database import Base
 # Import all models to ensure they're registered with Base.metadata
 from app.models.user import Organization, User, Role, Session, user_roles
 from app.models.audit import AuditLog, AuditLogCheckpoint
+from app.models.onboarding import OnboardingStatus, OnboardingChecklistItem
 
 # This is the Alembic Config object
 config = context.config
