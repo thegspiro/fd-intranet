@@ -111,8 +111,8 @@ const EmailPlatformChoice: React.FC = () => {
 
     // Navigate to next step based on selection
     if (selectedPlatform === 'other') {
-      // Skip email configuration, go to next onboarding step
-      navigate('/onboarding/admin-user');
+      // Skip email configuration, go to file storage selection
+      navigate('/onboarding/file-storage');
     } else {
       // Go to email configuration page
       navigate('/onboarding/email-config');

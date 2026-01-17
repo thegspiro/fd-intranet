@@ -12,6 +12,8 @@ const STORAGE_KEYS = {
   EMAIL_PLATFORM: 'emailPlatform',
   EMAIL_CONFIG: 'emailConfig',
   EMAIL_CONFIG_METHOD: 'emailConfigMethod',
+  FILE_STORAGE_PLATFORM: 'fileStoragePlatform',
+  FILE_STORAGE_CONFIG: 'fileStorageConfig',
   ADMIN_USER: 'adminUser',
 } as const;
 
@@ -26,6 +28,8 @@ export const getOnboardingData = (): Partial<OnboardingData> => {
   const emailPlatform = sessionStorage.getItem(STORAGE_KEYS.EMAIL_PLATFORM) as OnboardingData['emailPlatform'];
   const emailConfigStr = sessionStorage.getItem(STORAGE_KEYS.EMAIL_CONFIG);
   const emailConfigMethod = sessionStorage.getItem(STORAGE_KEYS.EMAIL_CONFIG_METHOD) as 'oauth' | 'apppassword' | null;
+  const fileStoragePlatform = sessionStorage.getItem(STORAGE_KEYS.FILE_STORAGE_PLATFORM) as OnboardingData['fileStoragePlatform'];
+  const fileStorageConfigStr = sessionStorage.getItem(STORAGE_KEYS.FILE_STORAGE_CONFIG);
   const adminUserStr = sessionStorage.getItem(STORAGE_KEYS.ADMIN_USER);
 
   return {
@@ -36,6 +40,8 @@ export const getOnboardingData = (): Partial<OnboardingData> => {
     emailPlatform,
     emailConfig: emailConfigStr ? JSON.parse(emailConfigStr) : undefined,
     emailConfigMethod: emailConfigMethod || undefined,
+    fileStoragePlatform,
+    fileStorageConfig: fileStorageConfigStr ? JSON.parse(fileStorageConfigStr) : undefined,
     adminUser: adminUserStr ? JSON.parse(adminUserStr) : undefined,
   };
 };
@@ -73,6 +79,20 @@ export const saveEmailConfig = (config: EmailConfig, method?: 'oauth' | 'apppass
   if (method) {
     sessionStorage.setItem(STORAGE_KEYS.EMAIL_CONFIG_METHOD, method);
   }
+};
+
+/**
+ * Save file storage platform choice
+ */
+export const saveFileStorage = (platform: string) => {
+  sessionStorage.setItem(STORAGE_KEYS.FILE_STORAGE_PLATFORM, platform);
+};
+
+/**
+ * Save file storage configuration
+ */
+export const saveFileStorageConfig = (config: Record<string, any>) => {
+  sessionStorage.setItem(STORAGE_KEYS.FILE_STORAGE_CONFIG, JSON.stringify(config));
 };
 
 /**

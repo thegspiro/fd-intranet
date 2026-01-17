@@ -16,6 +16,10 @@ export interface OnboardingData {
   emailConfig?: EmailConfig;
   emailConfigMethod?: 'oauth' | 'apppassword';
 
+  // File Storage Configuration
+  fileStoragePlatform: 'googledrive' | 'onedrive' | 's3' | 'local' | 'other' | null;
+  fileStorageConfig?: FileStorageConfig;
+
   // Admin User
   adminUser?: AdminUser;
 }
@@ -44,6 +48,29 @@ export interface EmailConfig {
   fromName?: string;
 }
 
+export interface FileStorageConfig {
+  // Google Drive
+  googleDriveClientId?: string;
+  googleDriveClientSecret?: string;
+  googleDriveFolderId?: string;
+
+  // OneDrive / SharePoint
+  oneDriveTenantId?: string;
+  oneDriveClientId?: string;
+  oneDriveClientSecret?: string;
+  sharePointSiteUrl?: string;
+  sharePointLibraryName?: string;
+
+  // Amazon S3
+  s3AccessKeyId?: string;
+  s3SecretAccessKey?: string;
+  s3BucketName?: string;
+  s3Region?: string;
+
+  // Local Storage
+  localStoragePath?: string;
+}
+
 export interface AdminUser {
   username: string;
   email: string;
@@ -66,6 +93,8 @@ export type OnboardingStep =
   | 'navigation-choice'
   | 'email-platform'
   | 'email-config'
+  | 'file-storage-choice'
+  | 'file-storage-config'
   | 'admin-user'
   | 'security-check'
   | 'complete';

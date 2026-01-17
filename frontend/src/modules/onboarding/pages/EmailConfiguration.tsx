@@ -104,13 +104,13 @@ const EmailConfiguration: React.FC = () => {
     sessionStorage.setItem('emailConfig', JSON.stringify(config));
     sessionStorage.setItem('emailConfigMethod', useOAuth ? 'oauth' : 'smtp');
 
-    // Navigate to next step (admin user creation)
-    navigate('/onboarding/admin-user');
+    // Navigate to next step (file storage selection)
+    navigate('/onboarding/file-storage');
   };
 
   const handleSkip = () => {
     toast.success('Email configuration skipped. You can set this up later.');
-    navigate('/onboarding/admin-user');
+    navigate('/onboarding/file-storage');
   };
 
   const currentYear = new Date().getFullYear();

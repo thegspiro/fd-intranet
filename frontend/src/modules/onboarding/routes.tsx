@@ -7,6 +7,7 @@ import {
   NavigationChoice,
   EmailPlatformChoice,
   EmailConfiguration,
+  FileStorageChoice,
   AdminUserCreation,
 } from './pages';
 
@@ -37,6 +38,32 @@ export const OnboardingRoutes: React.FC = () => {
 
       {/* Onboarding wizard - Email Configuration */}
       <Route path="/onboarding/email-config" element={<EmailConfiguration />} />
+
+      {/* Onboarding wizard - File Storage Choice */}
+      <Route path="/onboarding/file-storage" element={<FileStorageChoice />} />
+
+      {/* Onboarding wizard - File Storage Configuration - Placeholder */}
+      <Route
+        path="/onboarding/file-storage-config"
+        element={
+          <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 flex items-center justify-center p-4">
+            <div className="max-w-2xl w-full bg-white/10 backdrop-blur-sm rounded-lg p-8 text-center border border-white/20">
+              <h2 className="text-3xl font-bold text-white mb-4">
+                File Storage Configuration
+              </h2>
+              <p className="text-slate-300 mb-6">
+                File storage configuration page is under development.
+              </p>
+              <button
+                onClick={() => window.location.href = '/onboarding/admin-user'}
+                className="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-semibold rounded-lg transition-all duration-300"
+              >
+                Continue to Admin User Creation →
+              </button>
+            </div>
+          </div>
+        }
+      />
 
       {/* Onboarding wizard - Admin User Creation */}
       <Route path="/onboarding/admin-user" element={<AdminUserCreation />} />
