@@ -6,6 +6,7 @@ Tracks onboarding progress and stores initial setup information.
 
 from sqlalchemy import Column, String, Boolean, DateTime, Text, JSON, Integer
 from sqlalchemy.sql import func
+from sqlalchemy.ext.mutable import MutableDict
 from datetime import datetime
 
 from app.core.database import Base
@@ -97,3 +98,43 @@ class OnboardingChecklistItem(Base):
 
     def __repr__(self):
         return f"<OnboardingChecklistItem(title={self.title}, priority={self.priority})>"
+
+
+class OnboardingSessionModel(Base):
+    """
+    Server-side onboarding session storage
+
+    SECURITY: Stores sensitive onboarding data encrypted server-side
+    instead of in browser sessionStorage. This prevents passwords,
+    API keys, and secrets from being exposed in the browser.
+
+    Session data includes:
+    - Department configuration
+    - Email/authentication settings (encrypted)
+    - File storage configuration (encrypted)
+    - Admin user credentials (encrypted)
+    - IT team information
+
+    Sessions expire after 2 hours of inactivity.
+    """
+    __tablename__ = "onboarding_sessions"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    session_id = Column(String(64), unique=True, nullable=False, index=True)
+
+    # Session data (JSON with encrypted sensitive fields)
+    data = Column(MutableDict.as_mutable(JSON), default={}, nullable=False)
+
+    # Client information for security tracking
+    ip_address = Column(String(45), nullable=False)
+    user_agent = Column(Text, nullable=True)
+
+    # Session expiration
+    expires_at = Column(DateTime(timezone=True), nullable=False, index=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    def __repr__(self):
+        return f"<OnboardingSession(id={self.id}, session_id={self.session_id[:8]}...)>"
