@@ -9,6 +9,7 @@ import {
   EmailConfiguration,
   FileStorageChoice,
   AuthenticationChoice,
+  ITTeamBackupAccess,
   AdminUserCreation,
 } from './pages';
 
@@ -68,6 +69,9 @@ export const OnboardingRoutes: React.FC = () => {
 
       {/* Onboarding wizard - Authentication Choice */}
       <Route path="/onboarding/authentication" element={<AuthenticationChoice />} />
+
+      {/* Onboarding wizard - IT Team & Backup Access */}
+      <Route path="/onboarding/it-team" element={<ITTeamBackupAccess />} />
 
       {/* Onboarding wizard - Admin User Creation */}
       <Route path="/onboarding/admin-user" element={<AdminUserCreation />} />

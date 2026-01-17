@@ -24,6 +24,9 @@ export interface OnboardingData {
   authenticationPlatform: 'google' | 'microsoft' | 'authentik' | null;
   authenticationConfig?: AuthenticationConfig;
 
+  // IT Team and Backup Access
+  itTeamInfo?: ITTeamInfo;
+
   // Admin User
   adminUser?: AdminUser;
 }
@@ -92,6 +95,23 @@ export interface AuthenticationConfig {
   authentikClientSecret?: string;
 }
 
+export interface ITTeamMember {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+}
+
+export interface ITTeamInfo {
+  itTeam: ITTeamMember[];
+  backupAccess: {
+    email: string;
+    phone: string;
+    secondaryAdminEmail: string | null;
+  };
+}
+
 export interface AdminUser {
   username: string;
   email: string;
@@ -117,6 +137,7 @@ export type OnboardingStep =
   | 'file-storage-choice'
   | 'file-storage-config'
   | 'authentication-choice'
+  | 'it-team-backup'
   | 'admin-user'
   | 'security-check'
   | 'complete';

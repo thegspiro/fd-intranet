@@ -122,9 +122,9 @@ const AuthenticationChoice: React.FC = () => {
     // Save selection to session storage
     saveAuthenticationPlatform(selectedPlatform);
 
-    // Route to authentication configuration or admin user creation
+    // Route to IT team and backup access setup
     if (selectedPlatform === 'google' || selectedPlatform === 'microsoft' || selectedPlatform === 'authentik') {
-      navigate('/onboarding/admin-user');
+      navigate('/onboarding/it-team');
     }
   };
 

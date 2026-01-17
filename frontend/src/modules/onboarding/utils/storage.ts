@@ -16,6 +16,7 @@ const STORAGE_KEYS = {
   FILE_STORAGE_CONFIG: 'fileStorageConfig',
   AUTHENTICATION_PLATFORM: 'authenticationPlatform',
   AUTHENTICATION_CONFIG: 'authenticationConfig',
+  IT_TEAM_INFO: 'itTeamInfo',
   ADMIN_USER: 'adminUser',
 } as const;
 
@@ -34,6 +35,7 @@ export const getOnboardingData = (): Partial<OnboardingData> => {
   const fileStorageConfigStr = sessionStorage.getItem(STORAGE_KEYS.FILE_STORAGE_CONFIG);
   const authenticationPlatform = sessionStorage.getItem(STORAGE_KEYS.AUTHENTICATION_PLATFORM) as OnboardingData['authenticationPlatform'];
   const authenticationConfigStr = sessionStorage.getItem(STORAGE_KEYS.AUTHENTICATION_CONFIG);
+  const itTeamInfoStr = sessionStorage.getItem(STORAGE_KEYS.IT_TEAM_INFO);
   const adminUserStr = sessionStorage.getItem(STORAGE_KEYS.ADMIN_USER);
 
   return {
@@ -48,6 +50,7 @@ export const getOnboardingData = (): Partial<OnboardingData> => {
     fileStorageConfig: fileStorageConfigStr ? JSON.parse(fileStorageConfigStr) : undefined,
     authenticationPlatform,
     authenticationConfig: authenticationConfigStr ? JSON.parse(authenticationConfigStr) : undefined,
+    itTeamInfo: itTeamInfoStr ? JSON.parse(itTeamInfoStr) : undefined,
     adminUser: adminUserStr ? JSON.parse(adminUserStr) : undefined,
   };
 };
@@ -113,6 +116,13 @@ export const saveAuthenticationPlatform = (platform: string) => {
  */
 export const saveAuthenticationConfig = (config: Record<string, any>) => {
   sessionStorage.setItem(STORAGE_KEYS.AUTHENTICATION_CONFIG, JSON.stringify(config));
+};
+
+/**
+ * Save IT team and backup access information
+ */
+export const saveITTeamInfo = (info: Record<string, any>) => {
+  sessionStorage.setItem(STORAGE_KEYS.IT_TEAM_INFO, JSON.stringify(info));
 };
 
 /**
