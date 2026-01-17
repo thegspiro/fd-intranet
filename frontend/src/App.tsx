@@ -8,6 +8,7 @@ import OnboardingCheck from './pages/OnboardingCheck';
 import DepartmentInfo from './pages/DepartmentInfo';
 import NavigationChoice from './pages/NavigationChoice';
 import EmailPlatformChoice from './pages/EmailPlatformChoice';
+import EmailConfiguration from './pages/EmailConfiguration';
 
 function App() {
   return (
@@ -29,28 +30,10 @@ function App() {
           {/* Onboarding wizard - Email Platform */}
           <Route path="/onboarding/email-platform" element={<EmailPlatformChoice />} />
 
+          {/* Onboarding wizard - Email Configuration */}
+          <Route path="/onboarding/email-config" element={<EmailConfiguration />} />
+
           {/* Placeholder routes for future development */}
-          <Route
-            path="/onboarding/email-config"
-            element={
-              <div className="min-h-screen bg-gradient-to-br from-slate-900 via-red-900 to-slate-900 flex items-center justify-center p-4">
-                <div className="max-w-2xl w-full bg-white/10 backdrop-blur-sm rounded-lg p-8 text-center border border-white/20">
-                  <h2 className="text-3xl font-bold text-white mb-4">
-                    Email Configuration - Step 4
-                  </h2>
-                  <p className="text-slate-300 mb-6">
-                    Email configuration page is under development.
-                  </p>
-                  <button
-                    onClick={() => window.history.back()}
-                    className="px-6 py-3 bg-slate-700 hover:bg-slate-600 text-white font-semibold rounded-lg transition-all duration-300"
-                  >
-                    ← Go Back
-                  </button>
-                </div>
-              </div>
-            }
-          />
 
           <Route
             path="/onboarding/admin-user"
