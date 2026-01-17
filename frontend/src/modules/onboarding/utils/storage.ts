@@ -14,6 +14,8 @@ const STORAGE_KEYS = {
   EMAIL_CONFIG_METHOD: 'emailConfigMethod',
   FILE_STORAGE_PLATFORM: 'fileStoragePlatform',
   FILE_STORAGE_CONFIG: 'fileStorageConfig',
+  AUTHENTICATION_PLATFORM: 'authenticationPlatform',
+  AUTHENTICATION_CONFIG: 'authenticationConfig',
   ADMIN_USER: 'adminUser',
 } as const;
 
@@ -30,6 +32,8 @@ export const getOnboardingData = (): Partial<OnboardingData> => {
   const emailConfigMethod = sessionStorage.getItem(STORAGE_KEYS.EMAIL_CONFIG_METHOD) as 'oauth' | 'apppassword' | null;
   const fileStoragePlatform = sessionStorage.getItem(STORAGE_KEYS.FILE_STORAGE_PLATFORM) as OnboardingData['fileStoragePlatform'];
   const fileStorageConfigStr = sessionStorage.getItem(STORAGE_KEYS.FILE_STORAGE_CONFIG);
+  const authenticationPlatform = sessionStorage.getItem(STORAGE_KEYS.AUTHENTICATION_PLATFORM) as OnboardingData['authenticationPlatform'];
+  const authenticationConfigStr = sessionStorage.getItem(STORAGE_KEYS.AUTHENTICATION_CONFIG);
   const adminUserStr = sessionStorage.getItem(STORAGE_KEYS.ADMIN_USER);
 
   return {
@@ -42,6 +46,8 @@ export const getOnboardingData = (): Partial<OnboardingData> => {
     emailConfigMethod: emailConfigMethod || undefined,
     fileStoragePlatform,
     fileStorageConfig: fileStorageConfigStr ? JSON.parse(fileStorageConfigStr) : undefined,
+    authenticationPlatform,
+    authenticationConfig: authenticationConfigStr ? JSON.parse(authenticationConfigStr) : undefined,
     adminUser: adminUserStr ? JSON.parse(adminUserStr) : undefined,
   };
 };
@@ -93,6 +99,20 @@ export const saveFileStorage = (platform: string) => {
  */
 export const saveFileStorageConfig = (config: Record<string, any>) => {
   sessionStorage.setItem(STORAGE_KEYS.FILE_STORAGE_CONFIG, JSON.stringify(config));
+};
+
+/**
+ * Save authentication platform choice
+ */
+export const saveAuthenticationPlatform = (platform: string) => {
+  sessionStorage.setItem(STORAGE_KEYS.AUTHENTICATION_PLATFORM, platform);
+};
+
+/**
+ * Save authentication configuration
+ */
+export const saveAuthenticationConfig = (config: Record<string, any>) => {
+  sessionStorage.setItem(STORAGE_KEYS.AUTHENTICATION_CONFIG, JSON.stringify(config));
 };
 
 /**

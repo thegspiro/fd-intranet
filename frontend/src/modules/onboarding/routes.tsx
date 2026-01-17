@@ -8,6 +8,7 @@ import {
   EmailPlatformChoice,
   EmailConfiguration,
   FileStorageChoice,
+  AuthenticationChoice,
   AdminUserCreation,
 } from './pages';
 
@@ -55,15 +56,18 @@ export const OnboardingRoutes: React.FC = () => {
                 File storage configuration page is under development.
               </p>
               <button
-                onClick={() => window.location.href = '/onboarding/admin-user'}
+                onClick={() => window.location.href = '/onboarding/authentication'}
                 className="px-6 py-3 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-semibold rounded-lg transition-all duration-300"
               >
-                Continue to Admin User Creation →
+                Continue to Authentication →
               </button>
             </div>
           </div>
         }
       />
+
+      {/* Onboarding wizard - Authentication Choice */}
+      <Route path="/onboarding/authentication" element={<AuthenticationChoice />} />
 
       {/* Onboarding wizard - Admin User Creation */}
       <Route path="/onboarding/admin-user" element={<AdminUserCreation />} />

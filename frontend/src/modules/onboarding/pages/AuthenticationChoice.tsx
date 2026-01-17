@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { HardDrive, Cloud, Database, FolderOpen, CheckCircle, Info } from 'lucide-react';
+import { Shield, CheckCircle, Info, Key } from 'lucide-react';
 import { OnboardingHeader, OnboardingFooter, ProgressIndicator } from '../components';
 import { useOnboardingStorage } from '../hooks';
-import { saveFileStorage } from '../utils/storage';
+import { saveAuthenticationPlatform } from '../utils/storage';
 
-interface FileStoragePlatform {
+interface AuthPlatform {
   id: string;
   name: string;
   description: string;
@@ -16,12 +16,12 @@ interface FileStoragePlatform {
   recommended?: boolean;
 }
 
-const FileStorageChoice: React.FC = () => {
+const AuthenticationChoice: React.FC = () => {
   const navigate = useNavigate();
   const { departmentName, logoPreview, onboardingData } = useOnboardingStorage();
   const [selectedPlatform, setSelectedPlatform] = useState<string>('');
 
-  // Get email platform to pre-select file storage
+  // Get email platform to pre-select authentication
   const emailPlatform = onboardingData.emailPlatform || sessionStorage.getItem('emailPlatform');
 
   useEffect(() => {
@@ -30,108 +30,89 @@ const FileStorageChoice: React.FC = () => {
       return;
     }
 
-    // Pre-select file storage based on email platform
+    // Pre-select authentication based on email platform
     if (emailPlatform === 'gmail') {
-      setSelectedPlatform('googledrive');
+      setSelectedPlatform('google');
     } else if (emailPlatform === 'microsoft') {
-      setSelectedPlatform('onedrive');
+      setSelectedPlatform('microsoft');
     } else {
-      setSelectedPlatform('local');
+      setSelectedPlatform('authentik');
     }
   }, [navigate, departmentName, emailPlatform]);
 
-  // Google Drive Icon
-  const GoogleDriveIcon = () => (
-    <svg className="w-10 h-10" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
-      <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
-      <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
-      <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
-      <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
-      <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
-      <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
-    </svg>
-  );
-
-  // OneDrive Icon
-  const OneDriveIcon = () => (
+  // Google Icon
+  const GoogleIcon = () => (
     <svg className="w-10 h-10" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
-      <path fill="#0078d4" d="M30.5 15.5c-5.24 0-9.8 3.05-11.95 7.45-3.55.25-6.55 2.65-7.45 5.95C5.7 29.9 2 34.15 2 39.25c0 5.65 4.6 10.25 10.25 10.25h25.5C43.45 49.5 48 44.95 48 39.25S43.45 29 37.75 29c-.45 0-.9.05-1.35.1-.5-7.45-6.7-13.6-14.4-13.6z"/>
-      <path fill="#0364b8" d="M18.55 22.95c-.35-.8-.65-1.65-.9-2.5 3.55.25 6.55 2.65 7.45 5.95 5.4 1 9.1 5.25 9.1 10.35 0 .45-.05.9-.1 1.35 5.7-.05 10.35-4.65 10.35-10.35S43.45 17.4 37.75 17.4c-.45 0-.9.05-1.35.1-.5-7.45-6.7-13.6-14.4-13.6-5.24 0-9.8 3.05-11.95 7.45-3.55.25-6.55 2.65-7.45 5.95 4.4-1 8.15-3.65 10.95-7.35z"/>
+      <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+      <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+      <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+      <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"/>
     </svg>
   );
 
-  const platforms: FileStoragePlatform[] = [
+  // Microsoft Icon
+  const MicrosoftIcon = () => (
+    <svg className="w-10 h-10" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <path fill="#ff5722" d="M6 6h18v18H6z"/>
+      <path fill="#4caf50" d="M26 6h18v18H26z"/>
+      <path fill="#ffc107" d="M6 26h18v18H6z"/>
+      <path fill="#03a9f4" d="M26 26h18v18H26z"/>
+    </svg>
+  );
+
+  // Authentik Icon
+  const AuthentikIcon = () => (
+    <svg className="w-10 h-10" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="24" cy="24" r="20" fill="#fd4b2d"/>
+      <path fill="#fff" d="M24 8l-4 12h8l-4 12 8-12h-6l4-12z"/>
+    </svg>
+  );
+
+  const platforms: AuthPlatform[] = [
     {
-      id: 'googledrive',
-      name: 'Google Drive',
-      description: 'Store files in Google Drive',
-      icon: <GoogleDriveIcon />,
+      id: 'google',
+      name: 'Google OAuth',
+      description: 'Sign in with Google accounts',
+      icon: <GoogleIcon />,
       color: 'from-blue-500 to-green-500',
       features: [
-        '15 GB free storage (expandable)',
-        'Easy sharing and collaboration',
-        'Automatic backup and sync',
-        'Integrated with Google Workspace'
+        'Users sign in with Google accounts',
+        'No password management needed',
+        'Multi-factor authentication built-in',
+        'Seamless for Google Workspace users'
       ],
-      setupInfo: 'You\'ll need to authorize access to your Google Drive account using OAuth 2.0.',
+      setupInfo: 'You\'ll need to create a Google Cloud project and configure OAuth 2.0 credentials.',
       recommended: emailPlatform === 'gmail',
     },
     {
-      id: 'onedrive',
-      name: 'OneDrive / SharePoint',
-      description: 'Microsoft cloud storage',
-      icon: <OneDriveIcon />,
-      color: 'from-blue-600 to-blue-400',
+      id: 'microsoft',
+      name: 'Microsoft Azure AD',
+      description: 'Sign in with Microsoft accounts',
+      icon: <MicrosoftIcon />,
+      color: 'from-blue-600 to-cyan-400',
       features: [
-        '5 GB free storage (expandable)',
-        'Deep integration with Office 365',
-        'Advanced security features',
-        'SharePoint document libraries'
+        'Users sign in with Microsoft accounts',
+        'Integration with Active Directory',
+        'Enterprise-grade security',
+        'Perfect for Microsoft 365 organizations'
       ],
-      setupInfo: 'You\'ll need your Microsoft 365 credentials and app registration details.',
+      setupInfo: 'You\'ll need to register an app in Azure Active Directory and configure authentication.',
       recommended: emailPlatform === 'microsoft',
     },
     {
-      id: 's3',
-      name: 'Amazon S3',
-      description: 'AWS cloud storage',
-      icon: <Database className="w-10 h-10 text-orange-500" />,
-      color: 'from-orange-600 to-yellow-500',
+      id: 'authentik',
+      name: 'Authentik SSO',
+      description: 'Self-hosted authentication platform',
+      icon: <AuthentikIcon />,
+      color: 'from-orange-600 to-red-500',
       features: [
-        'Pay-as-you-go pricing',
-        'Highly scalable and reliable',
-        '99.999999999% durability',
-        'Advanced security and compliance'
+        'Self-hosted, open-source SSO',
+        'Complete control over user data',
+        'Support for LDAP, SAML, OAuth',
+        'Advanced authentication flows'
       ],
-      setupInfo: 'You\'ll need an AWS account, Access Key ID, and Secret Access Key.',
-    },
-    {
-      id: 'local',
-      name: 'Local Storage',
-      description: 'Store files on your server',
-      icon: <HardDrive className="w-10 h-10 text-slate-400" />,
-      color: 'from-slate-600 to-slate-400',
-      features: [
-        'Complete control over your data',
-        'No third-party dependencies',
-        'No monthly fees',
-        'Requires manual backups'
-      ],
-      setupInfo: 'Files will be stored in your configured upload directory. Make sure you have adequate storage space and a backup strategy.',
+      setupInfo: 'You\'ll need to deploy Authentik on your infrastructure and configure an OAuth2/OIDC provider.',
       recommended: emailPlatform === 'selfhosted' || emailPlatform === 'other',
-    },
-    {
-      id: 'other',
-      name: 'Configure Later',
-      description: 'Skip for now',
-      icon: <FolderOpen className="w-10 h-10 text-slate-500" />,
-      color: 'from-slate-700 to-slate-500',
-      features: [
-        'Set up file storage later',
-        'Use local storage as default',
-        'Can be changed in settings'
-      ],
-      setupInfo: 'You can configure file storage later in the system settings.',
     },
   ];
 
@@ -139,13 +120,11 @@ const FileStorageChoice: React.FC = () => {
     if (!selectedPlatform) return;
 
     // Save selection to session storage
-    saveFileStorage(selectedPlatform);
+    saveAuthenticationPlatform(selectedPlatform);
 
-    // Route based on selection
-    if (selectedPlatform === 'other') {
-      navigate('/onboarding/authentication');
-    } else {
-      navigate('/onboarding/file-storage-config');
+    // Route to authentication configuration or admin user creation
+    if (selectedPlatform === 'google' || selectedPlatform === 'microsoft' || selectedPlatform === 'authentik') {
+      navigate('/onboarding/admin-user');
     }
   };
 
@@ -157,17 +136,17 @@ const FileStorageChoice: React.FC = () => {
         <div className="max-w-5xl w-full">
           {/* Page Header */}
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-              <Cloud className="w-8 h-8 text-white" />
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-purple-600 rounded-full mb-4">
+              <Key className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-white mb-3">
-              File Storage
+              User Authentication
             </h2>
             <p className="text-xl text-slate-300 mb-2">
-              Where should department files be stored?
+              How should users sign in to the system?
             </p>
             <p className="text-sm text-slate-400">
-              Documents, images, reports, and other files
+              Choose your authentication provider
             </p>
           </div>
 
@@ -181,17 +160,33 @@ const FileStorageChoice: React.FC = () => {
                     Smart Recommendation
                   </p>
                   <p className="text-green-200 text-sm">
-                    Based on your {emailPlatform === 'gmail' ? 'Gmail' : 'Microsoft 365'} email selection,
-                    we've pre-selected {emailPlatform === 'gmail' ? 'Google Drive' : 'OneDrive'} for seamless
-                    integration with your existing platform.
+                    Based on your {emailPlatform === 'gmail' ? 'Gmail' : 'Microsoft 365'} setup,
+                    we recommend {emailPlatform === 'gmail' ? 'Google OAuth' : 'Microsoft Azure AD'} for
+                    seamless integration with your existing accounts.
                   </p>
                 </div>
               </div>
             </div>
           )}
 
+          {/* Security Notice */}
+          <div className="bg-blue-500/10 border border-blue-500/50 rounded-lg p-4 mb-6 max-w-3xl mx-auto">
+            <div className="flex items-start space-x-3">
+              <Shield className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-blue-300 text-sm font-medium mb-1">
+                  Enterprise Security
+                </p>
+                <p className="text-blue-200 text-sm">
+                  All authentication methods support multi-factor authentication (MFA) and are
+                  HIPAA compliant when properly configured.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* Platform Cards */}
-          <div className="grid md:grid-cols-2 gap-4 mb-8">
+          <div className="grid md:grid-cols-3 gap-4 mb-8">
             {platforms.map((platform) => (
               <button
                 key={platform.id}
@@ -205,8 +200,8 @@ const FileStorageChoice: React.FC = () => {
               >
                 {/* Recommended Badge */}
                 {platform.recommended && (
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500 text-white">
+                  <div className="absolute -top-2 -right-2">
+                    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500 text-white shadow-lg">
                       <CheckCircle className="w-3 h-3 mr-1" />
                       Recommended
                     </span>
@@ -220,14 +215,14 @@ const FileStorageChoice: React.FC = () => {
                   </div>
                 )}
 
-                <div className={`flex items-start space-x-4 ${selectedPlatform === platform.id ? 'mt-8' : platform.recommended ? 'mt-8' : ''}`}>
+                <div className={`${selectedPlatform === platform.id ? 'mt-8' : platform.recommended ? 'mt-6' : ''}`}>
                   {/* Icon */}
-                  <div className={`flex-shrink-0 w-16 h-16 rounded-lg bg-gradient-to-br ${platform.color} flex items-center justify-center`}>
+                  <div className={`flex-shrink-0 w-16 h-16 rounded-lg bg-gradient-to-br ${platform.color} flex items-center justify-center mb-4`}>
                     {platform.icon}
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="mb-4">
                     <h3 className="text-xl font-bold text-white mb-1">
                       {platform.name}
                     </h3>
@@ -236,10 +231,10 @@ const FileStorageChoice: React.FC = () => {
                     </p>
 
                     {/* Features */}
-                    <ul className="space-y-1 mb-3">
+                    <ul className="space-y-1.5 mb-4">
                       {platform.features.map((feature, index) => (
-                        <li key={index} className="flex items-start text-sm text-slate-300">
-                          <CheckCircle className="w-4 h-4 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
+                        <li key={index} className="flex items-start text-xs text-slate-300">
+                          <CheckCircle className="w-3.5 h-3.5 text-green-400 mr-2 flex-shrink-0 mt-0.5" />
                           <span>{feature}</span>
                         </li>
                       ))}
@@ -274,7 +269,7 @@ const FileStorageChoice: React.FC = () => {
             </button>
 
             {/* Progress Indicator */}
-            <ProgressIndicator currentStep={6} totalSteps={8} className="mt-6 pt-6 border-t border-white/10" />
+            <ProgressIndicator currentStep={7} totalSteps={8} className="mt-6 pt-6 border-t border-white/10" />
           </div>
         </div>
       </main>
@@ -284,4 +279,4 @@ const FileStorageChoice: React.FC = () => {
   );
 };
 
-export default FileStorageChoice;
+export default AuthenticationChoice;

@@ -20,6 +20,10 @@ export interface OnboardingData {
   fileStoragePlatform: 'googledrive' | 'onedrive' | 's3' | 'local' | 'other' | null;
   fileStorageConfig?: FileStorageConfig;
 
+  // Authentication Configuration
+  authenticationPlatform: 'google' | 'microsoft' | 'authentik' | null;
+  authenticationConfig?: AuthenticationConfig;
+
   // Admin User
   adminUser?: AdminUser;
 }
@@ -71,6 +75,23 @@ export interface FileStorageConfig {
   localStoragePath?: string;
 }
 
+export interface AuthenticationConfig {
+  // Google OAuth
+  googleAuthClientId?: string;
+  googleAuthClientSecret?: string;
+  googleAuthDomain?: string;
+
+  // Microsoft Azure AD
+  microsoftAuthTenantId?: string;
+  microsoftAuthClientId?: string;
+  microsoftAuthClientSecret?: string;
+
+  // Authentik
+  authentikUrl?: string;
+  authentikClientId?: string;
+  authentikClientSecret?: string;
+}
+
 export interface AdminUser {
   username: string;
   email: string;
@@ -95,6 +116,7 @@ export type OnboardingStep =
   | 'email-config'
   | 'file-storage-choice'
   | 'file-storage-config'
+  | 'authentication-choice'
   | 'admin-user'
   | 'security-check'
   | 'complete';
