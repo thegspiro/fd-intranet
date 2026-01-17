@@ -330,10 +330,46 @@ sessionStorage.setItem('itTeamConfigured', 'true');
    - Creates admin user (password hashed with Argon2id)
    - Requires CSRF token
    - **CRITICAL**: Password never stored client-side
+   - **Returns**: Authentication token (JWT) to log user in automatically
+   - Token stored in localStorage (backend can also set httpOnly cookie)
 
 8. **POST /api/v1/onboarding/complete**
    - Completes onboarding
-   - Clears server-side session
+   - Clears server-side onboarding session
+   - Keeps authentication token (user stays logged in)
+   - Frontend clears all onboarding data from sessionStorage
+
+---
+
+## Authentication Flow After Onboarding
+
+After the admin user creates their account, they are **automatically logged in** and redirected to the dashboard:
+
+### Flow:
+1. User submits admin account form
+2. `POST /api/v1/onboarding/admin-user` creates user and returns auth token
+3. Token stored in `localStorage` (or httpOnly cookie set by backend)
+4. `POST /api/v1/onboarding/complete` finalizes onboarding
+5. All onboarding data cleared from sessionStorage
+6. User redirected to `/dashboard`
+7. Dashboard checks for auth token, displays if authenticated
+
+### Authentication Check:
+```typescript
+// Dashboard.tsx checks authentication on mount
+const authToken = localStorage.getItem('auth_token');
+if (!authToken) {
+  navigate('/login'); // Redirect to login if not authenticated
+}
+```
+
+### Logout Flow:
+```typescript
+// Clear authentication and redirect
+localStorage.removeItem('auth_token');
+sessionStorage.clear();
+navigate('/login');
+```
 
 ---
 
@@ -348,6 +384,12 @@ sessionStorage.setItem('itTeamConfigured', 'true');
 - [ ] Auth platform choice saves
 - [ ] IT team info saves
 - [ ] Admin user creation works
+- [ ] **Auth token received and stored after admin creation**
+- [ ] **Onboarding completion endpoint called**
+- [ ] **All sessionStorage onboarding data cleared**
+- [ ] **Automatic redirect to /dashboard after completion**
+- [ ] **Dashboard displays correctly with user authenticated**
+- [ ] **Logout button clears auth token and redirects to login**
 - [ ] Password never appears in sessionStorage
 - [ ] Password never appears in localStorage
 - [ ] Password never appears in browser dev tools

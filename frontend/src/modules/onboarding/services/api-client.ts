@@ -250,6 +250,7 @@ class SecureApiClient {
   /**
    * Create admin user
    * SECURITY CRITICAL: Password sent once via HTTPS, never stored client-side
+   * Returns authentication token to log user in automatically
    */
   async createAdminUser(data: {
     username: string;
@@ -266,18 +267,29 @@ class SecureApiClient {
     data.password = '';
     data.password_confirm = '';
 
+    // If successful, store auth token (backend should set httpOnly cookie)
+    // The token will be used for subsequent authenticated requests
+    if (response.data?.access_token) {
+      // SECURITY: Backend should set httpOnly cookie for token
+      // If token is returned in response body, store it temporarily
+      // (This is a fallback - httpOnly cookies are preferred)
+      localStorage.setItem('auth_token', response.data.access_token);
+    }
+
     return response;
   }
 
   /**
-   * Complete onboarding
+   * Complete onboarding and finalize setup
+   * Clears onboarding session and prepares for main app access
    */
   async completeOnboarding(): Promise<ApiResponse<any>> {
     const response = await this.request('POST', '/onboarding/complete', {}, true);
 
-    // Clear session after completion
-    if (response.statusCode === 200) {
+    // Clear onboarding session after completion
+    if (response.statusCode === 200 || response.statusCode === 201) {
       this.clearSession();
+      // Keep auth token - user is now logged in
     }
 
     return response;

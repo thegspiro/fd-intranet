@@ -188,10 +188,31 @@ const AdminUserCreation: React.FC = () => {
         confirmPassword: '',
       });
 
-      toast.success('Admin user created successfully!');
+      toast.success('Admin account created! Setting up your dashboard...');
 
-      // Navigate to completion
-      navigate('/onboarding/complete');
+      // Complete onboarding and finalize setup
+      const completeResponse = await apiClient.completeOnboarding();
+
+      if (completeResponse.error) {
+        toast.error('Account created but setup incomplete. Please contact support.');
+        setIsSaving(false);
+        return;
+      }
+
+      // Clear all onboarding data from sessionStorage
+      sessionStorage.removeItem('departmentName');
+      sessionStorage.removeItem('logoData');
+      sessionStorage.removeItem('navigationLayout');
+      sessionStorage.removeItem('emailPlatform');
+      sessionStorage.removeItem('emailConfigured');
+      sessionStorage.removeItem('fileStoragePlatform');
+      sessionStorage.removeItem('authPlatform');
+      sessionStorage.removeItem('itTeamConfigured');
+
+      toast.success('Welcome to your department dashboard!');
+
+      // Navigate to main dashboard (user is now authenticated)
+      navigate('/dashboard');
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to create admin user';
       toast.error(errorMessage);
@@ -637,14 +658,14 @@ const AdminUserCreation: React.FC = () => {
                     ? 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
                     : 'bg-slate-700 text-slate-400 cursor-not-allowed'
                 }`}
-                aria-label="Create admin account and continue"
+                aria-label="Create admin account and access dashboard"
               >
-                {isSaving ? 'Creating Account Securely...' : 'Create Admin Account'}
+                {isSaving ? 'Creating Account & Finalizing Setup...' : 'Create Account & Access Dashboard'}
               </button>
 
               {/* Help Text */}
               <p className="text-center text-slate-400 text-sm mt-4">
-                You can create additional user accounts after setup is complete
+                You'll be logged in automatically and redirected to your dashboard
               </p>
 
               {/* Progress Indicator */}

@@ -5,6 +5,9 @@ import { Toaster } from 'react-hot-toast';
 // Modules
 import { OnboardingRoutes } from './modules/onboarding';
 
+// Pages
+import Dashboard from './pages/Dashboard';
+
 /**
  * Main Application Component
  *
@@ -27,6 +30,11 @@ function App() {
               MAIN APPLICATION ROUTES
               (After onboarding is complete)
               ============================================ */}
+
+          {/* Main Dashboard - User lands here after onboarding */}
+          <Route path="/dashboard" element={<Dashboard />} />
+
+          {/* Login Page */}
           <Route
             path="/login"
             element={
