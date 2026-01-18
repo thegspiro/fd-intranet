@@ -23,6 +23,15 @@ from app.schemas.organization import (
     OrganizationSettingsResponse,
     ContactInfoSettings,
 )
+from app.schemas.role import (
+    RoleBase,
+    RoleCreate,
+    RoleUpdate,
+    PermissionDetail,
+    PermissionCategory,
+    UserRoleAssignment,
+    UserRoleResponse,
+)
 
 __all__ = [
     # User schemas
@@ -42,4 +51,12 @@ __all__ = [
     "OrganizationSettingsUpdate",
     "OrganizationSettingsResponse",
     "ContactInfoSettings",
+    # Role schemas
+    "RoleBase",
+    "RoleCreate",
+    "RoleUpdate",
+    "PermissionDetail",
+    "PermissionCategory",
+    "UserRoleAssignment",
+    "UserRoleResponse",
 ]
