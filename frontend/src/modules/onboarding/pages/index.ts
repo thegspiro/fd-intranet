@@ -7,4 +7,5 @@ export { default as EmailConfiguration } from './EmailConfiguration';
 export { default as FileStorageChoice } from './FileStorageChoice';
 export { default as AuthenticationChoice } from './AuthenticationChoice';
 export { default as ITTeamBackupAccess } from './ITTeamBackupAccess';
+export { default as ModuleSelection } from './ModuleSelection';
 export { default as AdminUserCreation } from './AdminUserCreation';

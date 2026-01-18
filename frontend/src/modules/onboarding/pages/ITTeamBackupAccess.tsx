@@ -169,8 +169,8 @@ const ITTeamBackupAccess: React.FC = () => {
 
       toast.success('IT team and backup access information saved securely');
 
-      // Navigate to admin user creation
-      navigate('/onboarding/admin-user');
+      // Navigate to module selection
+      navigate('/onboarding/module-selection');
     } catch (err: any) {
       const errorMessage = err.message || 'Failed to save IT team information';
       toast.error(errorMessage);
@@ -450,11 +450,11 @@ const ITTeamBackupAccess: React.FC = () => {
                     : 'bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
                 }`}
               >
-                {isSaving ? 'Saving Securely...' : 'Continue to Admin Setup'}
+                {isSaving ? 'Saving Securely...' : 'Continue to Module Selection'}
               </button>
 
               {/* Progress Indicator */}
-              <ProgressIndicator currentStep={8} totalSteps={8} className="mt-6 pt-6 border-t border-white/10" />
+              <ProgressIndicator currentStep={7} totalSteps={9} className="mt-6 pt-6 border-t border-white/10" />
             </div>
           </form>
         </div>

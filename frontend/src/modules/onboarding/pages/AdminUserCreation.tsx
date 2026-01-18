@@ -672,17 +672,17 @@ const AdminUserCreation: React.FC = () => {
               <div className="mt-6 pt-6 border-t border-white/10">
                 <div className="flex items-center justify-between text-sm text-slate-400 mb-2">
                   <span>Setup Progress</span>
-                  <span>Step 5 of 7</span>
+                  <span>Step 9 of 9</span>
                 </div>
                 <div className="w-full bg-slate-800 rounded-full h-2">
                   <div
                     className="bg-gradient-to-r from-red-600 to-orange-600 h-2 rounded-full transition-all duration-500"
-                    style={{ width: '71%' }}
+                    style={{ width: '100%' }}
                     role="progressbar"
-                    aria-valuenow={71}
+                    aria-valuenow={100}
                     aria-valuemin={0}
                     aria-valuemax={100}
-                    aria-label="Setup progress: 71 percent complete"
+                    aria-label="Setup progress: 100 percent complete"
                   />
                 </div>
               </div>

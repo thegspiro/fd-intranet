@@ -248,6 +248,14 @@ class SecureApiClient {
   }
 
   /**
+   * Save module configuration
+   * Stores which modules are enabled for the department
+   */
+  async saveModuleConfig(data: { modules: string[] }): Promise<ApiResponse<any>> {
+    return this.request('POST', '/onboarding/session/modules', data, true);
+  }
+
+  /**
    * Create admin user
    * SECURITY CRITICAL: Password sent once via HTTPS, never stored client-side
    * Returns authentication token to log user in automatically
