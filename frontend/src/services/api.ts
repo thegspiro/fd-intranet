@@ -21,6 +21,20 @@ import type {
   CurrentUser,
   PasswordChangeData,
 } from '../types/auth';
+import type {
+  TrainingCourse,
+  TrainingCourseCreate,
+  TrainingCourseUpdate,
+  TrainingRecord,
+  TrainingRecordCreate,
+  TrainingRecordUpdate,
+  TrainingRequirement,
+  TrainingRequirementCreate,
+  TrainingRequirementUpdate,
+  UserTrainingStats,
+  TrainingReport,
+  RequirementProgress,
+} from '../types/training';
 
 const API_BASE_URL = '/api/v1';
 
@@ -295,5 +309,149 @@ export const authService = {
     } catch (error) {
       return false;
     }
+  },
+};
+
+export const trainingService = {
+  /**
+   * Get all training courses
+   */
+  async getCourses(activeOnly: boolean = true): Promise<TrainingCourse[]> {
+    const response = await api.get<TrainingCourse[]>('/training/courses', {
+      params: { active_only: activeOnly },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get a specific course
+   */
+  async getCourse(courseId: string): Promise<TrainingCourse> {
+    const response = await api.get<TrainingCourse>(`/training/courses/${courseId}`);
+    return response.data;
+  },
+
+  /**
+   * Create a new course
+   */
+  async createCourse(course: TrainingCourseCreate): Promise<TrainingCourse> {
+    const response = await api.post<TrainingCourse>('/training/courses', course);
+    return response.data;
+  },
+
+  /**
+   * Update a course
+   */
+  async updateCourse(courseId: string, updates: TrainingCourseUpdate): Promise<TrainingCourse> {
+    const response = await api.patch<TrainingCourse>(`/training/courses/${courseId}`, updates);
+    return response.data;
+  },
+
+  /**
+   * Get training records
+   */
+  async getRecords(params?: {
+    user_id?: string;
+    status?: string;
+    start_date?: string;
+    end_date?: string;
+  }): Promise<TrainingRecord[]> {
+    const response = await api.get<TrainingRecord[]>('/training/records', { params });
+    return response.data;
+  },
+
+  /**
+   * Create a training record
+   */
+  async createRecord(record: TrainingRecordCreate): Promise<TrainingRecord> {
+    const response = await api.post<TrainingRecord>('/training/records', record);
+    return response.data;
+  },
+
+  /**
+   * Update a training record
+   */
+  async updateRecord(recordId: string, updates: TrainingRecordUpdate): Promise<TrainingRecord> {
+    const response = await api.patch<TrainingRecord>(`/training/records/${recordId}`, updates);
+    return response.data;
+  },
+
+  /**
+   * Get training requirements
+   */
+  async getRequirements(params?: {
+    year?: number;
+    active_only?: boolean;
+  }): Promise<TrainingRequirement[]> {
+    const response = await api.get<TrainingRequirement[]>('/training/requirements', { params });
+    return response.data;
+  },
+
+  /**
+   * Create a training requirement
+   */
+  async createRequirement(requirement: TrainingRequirementCreate): Promise<TrainingRequirement> {
+    const response = await api.post<TrainingRequirement>('/training/requirements', requirement);
+    return response.data;
+  },
+
+  /**
+   * Update a training requirement
+   */
+  async updateRequirement(
+    requirementId: string,
+    updates: TrainingRequirementUpdate
+  ): Promise<TrainingRequirement> {
+    const response = await api.patch<TrainingRequirement>(
+      `/training/requirements/${requirementId}`,
+      updates
+    );
+    return response.data;
+  },
+
+  /**
+   * Get training statistics for a user
+   */
+  async getUserStats(userId: string): Promise<UserTrainingStats> {
+    const response = await api.get<UserTrainingStats>(`/training/stats/user/${userId}`);
+    return response.data;
+  },
+
+  /**
+   * Generate a training report
+   */
+  async generateReport(
+    userId: string,
+    startDate: string,
+    endDate: string
+  ): Promise<TrainingReport> {
+    const response = await api.get<TrainingReport>(`/training/reports/user/${userId}`, {
+      params: { start_date: startDate, end_date: endDate },
+    });
+    return response.data;
+  },
+
+  /**
+   * Get requirement progress for a user
+   */
+  async getRequirementProgress(
+    userId: string,
+    year?: number
+  ): Promise<RequirementProgress[]> {
+    const response = await api.get<RequirementProgress[]>(
+      `/training/requirements/progress/${userId}`,
+      { params: { year } }
+    );
+    return response.data;
+  },
+
+  /**
+   * Get expiring certifications
+   */
+  async getExpiringCertifications(daysAhead: number = 90): Promise<TrainingRecord[]> {
+    const response = await api.get<TrainingRecord[]>('/training/certifications/expiring', {
+      params: { days_ahead: daysAhead },
+    });
+    return response.data;
   },
 };

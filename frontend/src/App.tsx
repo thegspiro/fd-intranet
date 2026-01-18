@@ -5,6 +5,7 @@ import MemberProfilePage from './pages/MemberProfilePage'
 import SettingsPage from './pages/SettingsPage'
 import MembersAdminPage from './pages/MembersAdminPage'
 import RoleManagementPage from './pages/RoleManagementPage'
+import TrainingDashboardPage from './pages/TrainingDashboardPage'
 import { LoginPage } from './pages/LoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -46,6 +47,9 @@ function Navigation() {
 
   const canAccessSettings = checkPermission('organization.update_settings')
 
+  const canAccessTraining = checkPermission('training.manage') ||
+                            checkPermission('training.view')
+
   return (
     <nav className="bg-white shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -75,6 +79,14 @@ function Navigation() {
                   className={`${isActive('/admin/roles')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
                 >
                   Role Management
+                </Link>
+              )}
+              {canAccessTraining && (
+                <Link
+                  to="/training"
+                  className={`${isActive('/training')} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium`}
+                >
+                  Training
                 </Link>
               )}
               {canAccessSettings && (
@@ -163,6 +175,14 @@ function App() {
             element={
               <ProtectedRoute requiredPermission="roles.view">
                 <RoleManagementPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/training"
+            element={
+              <ProtectedRoute requiredPermission="training.view">
+                <TrainingDashboardPage />
               </ProtectedRoute>
             }
           />
