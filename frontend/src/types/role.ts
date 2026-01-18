@@ -2,6 +2,8 @@
  * Role and Permission type definitions
  */
 
+import type { NotificationPreferences } from './user';
+
 export interface Role {
   id: string;
   organization_id: string;
@@ -40,6 +42,7 @@ export interface UserWithRoles {
   photo_url?: string;
   status: string;
   hire_date?: string;
+  notification_preferences?: NotificationPreferences;
   roles: Role[];
 }
 

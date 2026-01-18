@@ -14,7 +14,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { userService } from '../services/api';
+import { useAuthStore } from '../stores/authStore';
 import type { UserWithRoles } from '../types/role';
+import type { ContactInfoUpdate, NotificationPreferences } from '../types/user';
 
 interface MonthlyHours {
   month: string;
@@ -53,10 +55,25 @@ interface InventoryItem {
 export const MemberProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuthStore();
 
   const [user, setUser] = useState<UserWithRoles | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Edit mode states
+  const [isEditing, setIsEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [editForm, setEditForm] = useState<ContactInfoUpdate>({
+    email: '',
+    phone: '',
+    mobile: '',
+    notification_preferences: {
+      email: true,
+      sms: false,
+      push: false,
+    },
+  });
 
   // Placeholder data - these would come from API calls
   const [monthlyHours] = useState<MonthlyHours>({
@@ -197,6 +214,64 @@ export const MemberProfilePage: React.FC = () => {
         return 'bg-gray-100 text-gray-800';
     }
   };
+
+  const handleEditClick = () => {
+    // Populate form with current user data
+    setEditForm({
+      email: user?.email || '',
+      phone: user?.phone || '',
+      mobile: user?.mobile || '',
+      notification_preferences: user?.notification_preferences || {
+        email: true,
+        sms: false,
+        push: false,
+      },
+    });
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setError(null);
+  };
+
+  const handleSaveContact = async () => {
+    if (!user || !userId) return;
+
+    try {
+      setSaving(true);
+      setError(null);
+
+      const updatedUser = await userService.updateContactInfo(userId, editForm);
+      setUser(updatedUser);
+      setIsEditing(false);
+    } catch (err: any) {
+      console.error('Error updating contact info:', err);
+      setError(err.response?.data?.detail || 'Failed to update contact information.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFormChange = (field: keyof ContactInfoUpdate, value: string) => {
+    setEditForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleNotificationToggle = (type: keyof NotificationPreferences) => {
+    setEditForm((prev) => ({
+      ...prev,
+      notification_preferences: {
+        ...prev.notification_preferences!,
+        [type]: !prev.notification_preferences![type],
+      },
+    }));
+  };
+
+  // Check if current user can edit this profile
+  const canEdit = currentUser?.id === userId;
 
   if (loading) {
     return (
@@ -427,27 +502,134 @@ export const MemberProfilePage: React.FC = () => {
         <div className="space-y-6">
           {/* Contact Information */}
           <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h2>
-            <div className="space-y-3">
-              {user.email && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Email</p>
-                  <p className="text-sm text-gray-900 mt-1">{user.email}</p>
-                </div>
-              )}
-              {user.phone && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Phone</p>
-                  <p className="text-sm text-gray-900 mt-1">{user.phone}</p>
-                </div>
-              )}
-              {user.mobile && (
-                <div>
-                  <p className="text-xs text-gray-500 uppercase font-medium">Mobile</p>
-                  <p className="text-sm text-gray-900 mt-1">{user.mobile}</p>
-                </div>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900">Contact Information</h2>
+              {canEdit && !isEditing && (
+                <button
+                  onClick={handleEditClick}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                >
+                  Edit
+                </button>
               )}
             </div>
+
+            {!isEditing ? (
+              <div className="space-y-3">
+                {user.email && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium">Email</p>
+                    <p className="text-sm text-gray-900 mt-1">{user.email}</p>
+                  </div>
+                )}
+                {user.phone && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium">Phone</p>
+                    <p className="text-sm text-gray-900 mt-1">{user.phone}</p>
+                  </div>
+                )}
+                {user.mobile && (
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-medium">Mobile</p>
+                    <p className="text-sm text-gray-900 mt-1">{user.mobile}</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase font-medium mb-1">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => handleFormChange('email', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase font-medium mb-1">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.phone}
+                    onChange={(e) => handleFormChange('phone', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 uppercase font-medium mb-1">
+                    Mobile
+                  </label>
+                  <input
+                    type="tel"
+                    value={editForm.mobile}
+                    onChange={(e) => handleFormChange('mobile', e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-gray-200">
+                  <label className="block text-xs text-gray-500 uppercase font-medium mb-3">
+                    Notification Preferences
+                  </label>
+                  <div className="space-y-2">
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editForm.notification_preferences?.email}
+                        onChange={() => handleNotificationToggle('email')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Email notifications</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editForm.notification_preferences?.sms}
+                        onChange={() => handleNotificationToggle('sms')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">SMS notifications</span>
+                    </label>
+                    <label className="flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={editForm.notification_preferences?.push}
+                        onChange={() => handleNotificationToggle('push')}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Push notifications</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <button
+                    onClick={handleSaveContact}
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Saving...' : 'Save Changes'}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    disabled={saving}
+                    className="flex-1 px-4 py-2 bg-white text-gray-700 text-sm font-medium border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                {error && (
+                  <div className="mt-2 text-sm text-red-600">
+                    {error}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Employment Info */}

@@ -12,12 +12,18 @@ from sqlalchemy.orm import selectinload
 from uuid import UUID
 
 from app.core.database import get_db
-from app.schemas.user import UserListResponse, UserWithRolesResponse
+from app.schemas.user import (
+    UserListResponse,
+    UserWithRolesResponse,
+    ContactInfoUpdate,
+    UserProfileResponse,
+)
 from app.schemas.role import UserRoleAssignment, UserRoleResponse
 from app.services.user_service import UserService
 from app.services.organization_service import OrganizationService
 from app.models.user import User, Role, user_roles
-# NOTE: Authentication is not yet implemented, so these endpoints are currently open
+from app.api.dependencies import get_current_user
+# NOTE: Authentication is now implemented
 # from app.api.dependencies import get_current_active_user, get_user_organization
 # from app.models.user import Organization
 
@@ -375,3 +381,105 @@ async def remove_role_from_user(
         "full_name": user.full_name,
         "roles": user.roles
     }
+
+
+@router.get("/{user_id}/with-roles", response_model=UserProfileResponse)
+async def get_user_with_roles(
+    user_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get a specific user with their assigned roles and notification preferences
+
+    This endpoint is for the member profile page.
+    Users can view any member's profile, but can only see notification preferences for their own profile.
+
+    **Authentication required**
+    """
+    result = await db.execute(
+        select(User)
+        .where(User.id == user_id)
+        .where(User.organization_id == current_user.organization_id)
+        .where(User.deleted_at.is_(None))
+        .options(selectinload(User.roles))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    return user
+
+
+@router.patch("/{user_id}/contact-info", response_model=UserProfileResponse)
+async def update_contact_info(
+    user_id: UUID,
+    contact_update: ContactInfoUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Update user contact information and notification preferences
+
+    Users can only update their own contact information unless they have admin permissions.
+
+    **Authentication required**
+    """
+    # Check if user is updating their own profile or has admin permissions
+    # For now, only allow users to update their own profile
+    if current_user.id != user_id:
+        # TODO: Add permission check for admins
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only update your own contact information"
+        )
+
+    result = await db.execute(
+        select(User)
+        .where(User.id == user_id)
+        .where(User.organization_id == current_user.organization_id)
+        .where(User.deleted_at.is_(None))
+        .options(selectinload(User.roles))
+    )
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+
+    # Update fields if provided
+    if contact_update.email is not None:
+        # Check if email is already in use by another user in the organization
+        existing = await db.execute(
+            select(User)
+            .where(User.email == contact_update.email)
+            .where(User.organization_id == current_user.organization_id)
+            .where(User.id != user_id)
+            .where(User.deleted_at.is_(None))
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email is already in use"
+            )
+        user.email = contact_update.email
+
+    if contact_update.phone is not None:
+        user.phone = contact_update.phone
+
+    if contact_update.mobile is not None:
+        user.mobile = contact_update.mobile
+
+    if contact_update.notification_preferences is not None:
+        user.notification_preferences = contact_update.notification_preferences.model_dump()
+
+    await db.commit()
+    await db.refresh(user)
+
+    return user

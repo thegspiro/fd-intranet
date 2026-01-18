@@ -104,3 +104,27 @@ class UserWithRolesResponse(UserResponse):
     roles: List[RoleResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class NotificationPreferences(BaseModel):
+    """Notification preferences schema"""
+    email: bool = True
+    sms: bool = False
+    push: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ContactInfoUpdate(BaseModel):
+    """Schema for updating contact information and notification preferences"""
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(None, max_length=20)
+    mobile: Optional[str] = Field(None, max_length=20)
+    notification_preferences: Optional[NotificationPreferences] = None
+
+
+class UserProfileResponse(UserResponse):
+    """Extended user response with notification preferences"""
+    notification_preferences: Optional[dict] = None
+
+    model_config = ConfigDict(from_attributes=True)

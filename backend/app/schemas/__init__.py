@@ -12,6 +12,9 @@ from app.schemas.user import (
     UserListResponse,
     UserWithRolesResponse,
     RoleResponse,
+    NotificationPreferences,
+    ContactInfoUpdate,
+    UserProfileResponse,
 )
 from app.schemas.organization import (
     OrganizationBase,
@@ -56,6 +59,9 @@ __all__ = [
     "UserListResponse",
     "UserWithRolesResponse",
     "RoleResponse",
+    "NotificationPreferences",
+    "ContactInfoUpdate",
+    "UserProfileResponse",
     # Organization schemas
     "OrganizationBase",
     "OrganizationCreate",

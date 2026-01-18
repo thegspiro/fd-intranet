@@ -93,7 +93,10 @@ class User(Base):
     status = Column(Enum(UserStatus), default=UserStatus.ACTIVE, index=True)
     email_verified = Column(Boolean, default=False)
     email_verified_at = Column(DateTime(timezone=True))
-    
+
+    # Notification Preferences
+    notification_preferences = Column(JSONB, default={"email": True, "sms": False, "push": False})
+
     # MFA
     mfa_enabled = Column(Boolean, default=False)
     mfa_secret = Column(String(32))

@@ -24,3 +24,16 @@ export interface ContactInfoSettings {
   show_phone: boolean;
   show_mobile: boolean;
 }
+
+export interface NotificationPreferences {
+  email: boolean;
+  sms: boolean;
+  push: boolean;
+}
+
+export interface ContactInfoUpdate {
+  email?: string;
+  phone?: string;
+  mobile?: string;
+  notification_preferences?: NotificationPreferences;
+}

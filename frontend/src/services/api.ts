@@ -5,7 +5,7 @@
  */
 
 import axios from 'axios';
-import type { User, ContactInfoSettings } from '../types/user';
+import type { User, ContactInfoSettings, ContactInfoUpdate } from '../types/user';
 import type {
   Role,
   Permission,
@@ -145,6 +145,14 @@ export const userService = {
    */
   async removeRoleFromUser(userId: string, roleId: string): Promise<UserRoleResponse> {
     const response = await api.delete<UserRoleResponse>(`/users/${userId}/roles/${roleId}`);
+    return response.data;
+  },
+
+  /**
+   * Update user contact information and notification preferences
+   */
+  async updateContactInfo(userId: string, contactInfo: ContactInfoUpdate): Promise<UserWithRoles> {
+    const response = await api.patch<UserWithRoles>(`/users/${userId}/contact-info`, contactInfo);
     return response.data;
   },
 };
