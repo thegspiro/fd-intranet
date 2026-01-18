@@ -7,11 +7,12 @@ Combines all API route modules into a single router.
 from fastapi import APIRouter
 
 # Import route modules
-from app.api.v1.endpoints import users, organizations, roles
+from app.api.v1.endpoints import users, organizations, roles, auth
 
 api_router = APIRouter()
 
 # Include route modules
+api_router.include_router(auth.router, prefix="/auth", tags=["authentication"])
 api_router.include_router(users.router, prefix="/users", tags=["users"])
 api_router.include_router(organizations.router, prefix="/organization", tags=["organization"])
 api_router.include_router(roles.router, prefix="/roles", tags=["roles"])
@@ -25,6 +26,7 @@ async def api_root():
         "endpoints": {
             "docs": "/docs",
             "health": "/health",
+            "auth": "/api/v1/auth",
             "users": "/api/v1/users",
             "organization_settings": "/api/v1/organization/settings",
             "roles": "/api/v1/roles",

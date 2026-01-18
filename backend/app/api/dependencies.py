@@ -8,10 +8,12 @@ from typing import Optional, List
 from fastapi import Depends, HTTPException, status, Header
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from uuid import UUID
 
 from app.core.database import get_db
 from app.models.user import User, Organization, Role
+from app.services.auth_service import AuthService
 
 
 class PermissionChecker:
@@ -71,29 +73,34 @@ async def get_current_user(
     """
     Get the current authenticated user from the request
 
-    In a real implementation, this would:
-    1. Extract the JWT token from the Authorization header
-    2. Verify the token signature
-    3. Extract the user ID from the token
-    4. Load the user from the database
-
-    For now, this is a placeholder that assumes authentication is handled elsewhere.
+    Extracts JWT token from Authorization header, validates it,
+    and returns the authenticated user.
     """
-    # TODO: Implement JWT token verification
-    # This is a placeholder implementation
-    if not authorization:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    # Placeholder: In production, decode JWT and get user_id
-    # For now, we'll just raise an exception
-    raise HTTPException(
-        status_code=status.HTTP_501_NOT_IMPLEMENTED,
-        detail="Authentication not yet implemented. This endpoint requires authentication."
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
     )
+
+    if not authorization:
+        raise credentials_exception
+
+    # Extract token from "Bearer <token>" format
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise credentials_exception
+    except ValueError:
+        raise credentials_exception
+
+    # Validate token and get user
+    auth_service = AuthService(db)
+    user = await auth_service.get_user_from_token(token)
+
+    if not user:
+        raise credentials_exception
+
+    return user
 
 
 async def get_current_active_user(

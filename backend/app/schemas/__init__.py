@@ -32,6 +32,20 @@ from app.schemas.role import (
     UserRoleAssignment,
     UserRoleResponse,
 )
+from app.schemas.auth import (
+    UserLogin,
+    UserRegister,
+    TokenResponse,
+    TokenRefresh,
+    CurrentUser,
+    PasswordChange,
+    PasswordResetRequest,
+    PasswordReset,
+    EmailVerification,
+    MFASetup,
+    MFAVerify,
+    MFALogin,
+)
 
 __all__ = [
     # User schemas
@@ -59,4 +73,17 @@ __all__ = [
     "PermissionCategory",
     "UserRoleAssignment",
     "UserRoleResponse",
+    # Auth schemas
+    "UserLogin",
+    "UserRegister",
+    "TokenResponse",
+    "TokenRefresh",
+    "CurrentUser",
+    "PasswordChange",
+    "PasswordResetRequest",
+    "PasswordReset",
+    "EmailVerification",
+    "MFASetup",
+    "MFAVerify",
+    "MFALogin",
 ]
