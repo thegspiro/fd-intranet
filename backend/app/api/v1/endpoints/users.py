@@ -34,9 +34,7 @@ router = APIRouter()
 @router.get("/", response_model=List[UserListResponse])
 async def list_users(
     db: AsyncSession = Depends(get_db),
-    # Uncomment when authentication is implemented:
-    # current_user: User = Depends(get_current_active_user),
-    # organization: Organization = Depends(get_user_organization),
+    current_user: User = Depends(get_current_user),
 ):
     """
     List all members in the organization
@@ -49,26 +47,20 @@ async def list_users(
     stating that it is for department purposes only and should not be used
     for commercial purposes.
 
-    **Authentication required** (currently not implemented)
+    **Authentication required**
     """
-    # TODO: Remove this once authentication is implemented
-    # For now, we'll use a hardcoded organization ID for testing
-    # In production, this would come from the authenticated user
-    from uuid import UUID
-    test_org_id = UUID("00000000-0000-0000-0000-000000000001")
-
     user_service = UserService(db)
     org_service = OrganizationService(db)
 
     # Get organization settings
-    settings = await org_service.get_organization_settings(test_org_id)
+    settings = await org_service.get_organization_settings(current_user.organization_id)
 
     # Check if contact info visibility is enabled
     include_contact_info = settings.contact_info_visibility.enabled
 
     # Get users with conditional contact info
     users = await user_service.get_users_for_organization(
-        organization_id=test_org_id,
+        organization_id=current_user.organization_id,
         include_contact_info=include_contact_info,
         contact_settings={
             "contact_info_visibility": {
@@ -85,8 +77,7 @@ async def list_users(
 @router.get("/contact-info-enabled")
 async def check_contact_info_enabled(
     db: AsyncSession = Depends(get_db),
-    # Uncomment when authentication is implemented:
-    # organization: Organization = Depends(get_user_organization),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Check if contact information display is enabled for the organization
@@ -94,14 +85,10 @@ async def check_contact_info_enabled(
     This endpoint can be used by the frontend to determine whether to show
     the privacy notice and contact information fields.
 
-    **Authentication required** (currently not implemented)
+    **Authentication required**
     """
-    # TODO: Remove this once authentication is implemented
-    from uuid import UUID
-    test_org_id = UUID("00000000-0000-0000-0000-000000000001")
-
     org_service = OrganizationService(db)
-    settings = await org_service.get_organization_settings(test_org_id)
+    settings = await org_service.get_organization_settings(current_user.organization_id)
 
     return {
         "enabled": settings.contact_info_visibility.enabled,
@@ -114,25 +101,19 @@ async def check_contact_info_enabled(
 @router.get("/with-roles", response_model=List[UserWithRolesResponse])
 async def list_users_with_roles(
     db: AsyncSession = Depends(get_db),
-    # Uncomment when authentication is implemented:
-    # current_user: User = Depends(require_permission("members.manage")),
-    # organization: Organization = Depends(get_user_organization),
+    current_user: User = Depends(require_permission("users.view", "members.manage")),
 ):
     """
     List all users with their assigned roles
 
     This endpoint is for the Members admin page.
-    Requires `members.manage` permission.
+    Requires `users.view` or `members.manage` permission.
 
-    **Authentication required** (currently not implemented)
+    **Authentication required**
     """
-    # TODO: Use authenticated organization ID
-    from uuid import UUID as UUIDType
-    test_org_id = UUIDType("00000000-0000-0000-0000-000000000001")
-
     result = await db.execute(
         select(User)
-        .where(User.organization_id == test_org_id)
+        .where(User.organization_id == current_user.organization_id)
         .where(User.deleted_at.is_(None))
         .options(selectinload(User.roles))
         .order_by(User.last_name, User.first_name)
@@ -146,22 +127,17 @@ async def list_users_with_roles(
 async def get_user_roles(
     user_id: UUID,
     db: AsyncSession = Depends(get_db),
-    # Uncomment when authentication is implemented:
-    # organization: Organization = Depends(get_user_organization),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Get roles assigned to a specific user
 
-    **Authentication required** (currently not implemented)
+    **Authentication required**
     """
-    # TODO: Use authenticated organization ID
-    from uuid import UUID as UUIDType
-    test_org_id = UUIDType("00000000-0000-0000-0000-000000000001")
-
     result = await db.execute(
         select(User)
         .where(User.id == user_id)
-        .where(User.organization_id == test_org_id)
+        .where(User.organization_id == current_user.organization_id)
         .where(User.deleted_at.is_(None))
         .options(selectinload(User.roles))
     )
@@ -251,26 +227,20 @@ async def add_role_to_user(
     user_id: UUID,
     role_id: UUID,
     db: AsyncSession = Depends(get_db),
-    # Uncomment when authentication is implemented:
-    # current_user: User = Depends(require_permission("members.assign_roles")),
-    # organization: Organization = Depends(get_user_organization),
+    current_user: User = Depends(require_permission("users.update_roles", "members.assign_roles")),
 ):
     """
     Add a single role to a user (keeps existing roles)
 
-    Requires `members.assign_roles` permission.
+    Requires `users.update_roles` or `members.assign_roles` permission.
 
-    **Authentication required** (currently not implemented)
+    **Authentication required**
     """
-    # TODO: Use authenticated organization ID
-    from uuid import UUID as UUIDType
-    test_org_id = UUIDType("00000000-0000-0000-0000-000000000001")
-
     # Get user
     result = await db.execute(
         select(User)
         .where(User.id == user_id)
-        .where(User.organization_id == test_org_id)
+        .where(User.organization_id == current_user.organization_id)
         .where(User.deleted_at.is_(None))
         .options(selectinload(User.roles))
     )
@@ -286,7 +256,7 @@ async def add_role_to_user(
     result = await db.execute(
         select(Role)
         .where(Role.id == role_id)
-        .where(Role.organization_id == test_org_id)
+        .where(Role.organization_id == current_user.organization_id)
     )
     role = result.scalar_one_or_none()
 
@@ -321,26 +291,20 @@ async def remove_role_from_user(
     user_id: UUID,
     role_id: UUID,
     db: AsyncSession = Depends(get_db),
-    # Uncomment when authentication is implemented:
-    # current_user: User = Depends(require_permission("members.assign_roles")),
-    # organization: Organization = Depends(get_user_organization),
+    current_user: User = Depends(require_permission("users.update_roles", "members.assign_roles")),
 ):
     """
     Remove a role from a user
 
-    Requires `members.assign_roles` permission.
+    Requires `users.update_roles` or `members.assign_roles` permission.
 
-    **Authentication required** (currently not implemented)
+    **Authentication required**
     """
-    # TODO: Use authenticated organization ID
-    from uuid import UUID as UUIDType
-    test_org_id = UUIDType("00000000-0000-0000-0000-000000000001")
-
     # Get user
     result = await db.execute(
         select(User)
         .where(User.id == user_id)
-        .where(User.organization_id == test_org_id)
+        .where(User.organization_id == current_user.organization_id)
         .where(User.deleted_at.is_(None))
         .options(selectinload(User.roles))
     )
