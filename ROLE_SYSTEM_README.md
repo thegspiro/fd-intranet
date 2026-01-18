@@ -23,21 +23,23 @@ The following roles are automatically created for each organization:
    - Cannot be deleted
 
 2. **Chief** (Priority: 95)
-   - Full administrative access
+   - Full administrative access (equal authority to President)
    - Can manage all aspects except IT-specific tasks
    - Can create and manage roles
+   - Can manage all modules including training, compliance, scheduling, inventory
    - Cannot be deleted
 
-3. **Assistant Chief** (Priority: 90)
+3. **President** (Priority: 95)
+   - Full administrative access (equal authority to Chief)
+   - Can manage all aspects except IT-specific tasks
+   - Can create and manage roles
+   - Can manage all modules including training, compliance, scheduling, inventory
+   - Cannot be deleted
+
+4. **Assistant Chief** (Priority: 90)
    - Broad administrative access
    - Can manage members and most modules
    - Cannot create roles
-   - Cannot be deleted
-
-4. **President** (Priority: 85)
-   - Organization administrative access
-   - Can manage meetings, elections, fundraising
-   - Can assign roles to members
    - Cannot be deleted
 
 5. **Vice President** (Priority: 80)
